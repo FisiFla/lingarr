@@ -32,17 +32,11 @@ public class CleanupJob
         await _scheduleService.UpdateJobState(jobName, JobStatus.Processing.GetDisplayName());
 
         var oneWeekAgo = DateTime.UtcNow.AddDays(-7);
-        var oldJobs = await _dbContext.TranslationRequests
+        var deletedCount = await _dbContext.TranslationRequests
             .Where(pg => pg.CreatedAt < oneWeekAgo)
-            .ToListAsync();
+            .ExecuteDeleteAsync();
 
-        foreach (var job in oldJobs)
-        {
-            _dbContext.TranslationRequests.Remove(job);
-        }
-
-        await _dbContext.SaveChangesAsync();
         await _scheduleService.UpdateJobState(jobName, JobStatus.Succeeded.GetDisplayName());
-        _logger.LogInformation($"Removed {oldJobs.Count} translation requests that are older than a week.");
+        _logger.LogInformation("Removed {DeletedCount} translation requests older than a week", deletedCount);
     }
 }
