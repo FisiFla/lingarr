@@ -71,6 +71,36 @@
                         </div>
                     </div>
                 </div>
+
+                <div v-if="quotaEntries.length" class="mt-4">
+                    <h3 class="mb-4 text-sm font-medium text-primary-content">
+                        Monthly Quotas
+                    </h3>
+                    <div class="flex flex-col gap-2">
+                        <div
+                            v-for="q in quotaEntries"
+                            :key="q.service"
+                            class="rounded-sm bg-primary p-2">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-primary-content/70 text-xs font-medium">
+                                    {{ formatServiceName(q.service) }}
+                                </h4>
+                                <span class="text-xs text-primary-content/50">
+                                    {{ formatChars(q.used) }}
+                                    <template v-if="q.limit"> / {{ formatChars(q.limit) }}</template>
+                                    <template v-else> (unlimited)</template>
+                                </span>
+                            </div>
+                            <div v-if="q.limit" class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                                <div
+                                    class="h-full rounded-full transition-all duration-500"
+                                    :class="(q.used / q.limit) * 100 > 90 ? 'bg-red-500' : 'bg-accent'"
+                                    :style="{ width: Math.min((q.used / q.limit) * 100, 100) + '%' }">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </template>
         </CardComponent>
 
@@ -124,6 +154,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { DailyStatistic, MEDIA_TYPE, Statistics } from '@/ts'
 import services from '@/services'
+import { serviceChainService } from '@/services/serviceChainService'
 import CardComponent from '@/components/common/CardComponent.vue'
 import ButtonComponent from '@/components/common/ButtonComponent.vue'
 import LoaderCircleIcon from '@/components/icons/LoaderCircleIcon.vue'
@@ -136,6 +167,7 @@ const resetting = ref(false)
 const error = ref<string | null>(null)
 const statistics = ref<Statistics>()
 const dailyStats = ref<DailyStatistic[]>()
+const quotaEntries = ref<{ service: string; used: number; limit: number | null }[]>([])
 
 const translationServices = computed(() => {
     if (!statistics.value?.translationsByService) return []
@@ -153,6 +185,12 @@ const formatNumber = (num: number): string => {
 
 const formatServiceName = (service: string): string => {
     return service.charAt(0).toUpperCase() + service.slice(1)
+}
+
+const formatChars = (chars: number): string => {
+    if (chars >= 1_000_000) return (chars / 1_000_000).toFixed(1) + 'M'
+    if (chars >= 1_000) return (chars / 1_000).toFixed(0) + 'K'
+    return chars.toString()
 }
 
 const getTranslationCount = (type: string): number => {
@@ -209,5 +247,16 @@ const handleResetStatistics = async () => {
 onMounted(async () => {
     await fetchDailyStats()
     await fetchStatistics()
+
+    try {
+        const usage = await serviceChainService.getUsage()
+        quotaEntries.value = Object.entries(usage).map(([service, data]) => ({
+            service,
+            used: data.used,
+            limit: data.limit
+        }))
+    } catch {
+        // Quota widget is non-critical, silently ignore
+    }
 })
 </script>

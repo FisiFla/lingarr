@@ -134,11 +134,19 @@ RESTful API documentation available at [lingarr.com/docs/api/](https://lingarr.c
 - Fixed `HttpClient` leak in `OpenAiService.GetModels()`
 - Replaced `Console.WriteLine` with structured `ILogger` calls
 
+### Features
+- **Multi-service translation chain** — configure multiple translation services in priority order with drag-to-reorder; jobs automatically fall through the chain on errors or quota exhaustion
+- **Per-service monthly character quotas** — set optional character limits per service with usage tracking and progress bars
+- **Dashboard quota widget** — view current month's usage per service at a glance
+- Improved webhook setup instructions with authentication guidance
+- Bumped default concurrent jobs support (`MAX_CONCURRENT_JOBS`)
+
 ### Infrastructure
 - Added `/api/health` endpoint with DB connectivity check
 - Added `HEALTHCHECK` and `EXPOSE 9876` to Dockerfile
 - Fixed Client Dockerfile CMD syntax; pinned to `node:22-alpine`
 - Centralized config path resolution with fallback chain
+- Added GitHub Actions CI for multi-arch Docker builds to GHCR
 
 ### Performance
 - `CleanupJob` now uses `ExecuteDeleteAsync()` instead of loading all rows into memory
