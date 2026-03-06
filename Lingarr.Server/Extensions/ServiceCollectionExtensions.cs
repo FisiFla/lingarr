@@ -137,9 +137,8 @@ public static class ServiceCollectionExtensions
     private static void ConfigureServices(this WebApplicationBuilder builder)
     {
         // Register auth
-        builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(
-            Environment.GetEnvironmentVariable("ENCRYPTION_KEYS")?.ToLower() ?? "/app/config/keys"
-            ));
+        builder.Services.AddDataProtection().PersistKeysToFileSystem(
+            new DirectoryInfo(DatabaseConfiguration.GetEncryptionKeysPath()));
         builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -294,7 +293,7 @@ public static class ServiceCollectionExtensions
     /// <param name="configuration">Hangfire global configuration</param>
     private static void ConfigureSqLiteStorage(IGlobalConfiguration configuration)
     {
-        var sqliteDbPath = Environment.GetEnvironmentVariable("DB_HANGFIRE_SQLITE_PATH") ?? "/app/config/Hangfire.db";
+        var sqliteDbPath = DatabaseConfiguration.GetHangfireSqlitePath();
         using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={sqliteDbPath}"))
         {
             // add Write-Ahead Logging

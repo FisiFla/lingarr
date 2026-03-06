@@ -4,6 +4,8 @@ namespace Lingarr.Core.Configuration;
 
 public static class DatabaseConfiguration
 {
+    private const string ContainerConfigPath = "/app/config";
+
     /// <summary>
     /// Gets the current database connection type from environment.
     /// Defaults to sqlite
@@ -71,8 +73,83 @@ public static class DatabaseConfiguration
 
     private static string GetSqliteConnectionString()
     {
-        var sqliteDbPath = Environment.GetEnvironmentVariable("SQLITE_DB_PATH") ?? "local.db";
-        return $"Data Source=/app/config/{sqliteDbPath};Foreign Keys=True";
+        return $"Data Source={GetSqliteDbPath()};Foreign Keys=True";
+    }
+
+    public static string GetSqliteDbPath()
+    {
+        var configuredPath = Environment.GetEnvironmentVariable("SQLITE_DB_PATH") ?? "local.db";
+        return ResolvePath(configuredPath);
+    }
+
+    public static string GetHangfireSqlitePath()
+    {
+        var configuredPath = Environment.GetEnvironmentVariable("DB_HANGFIRE_SQLITE_PATH") ?? "Hangfire.db";
+        return ResolvePath(configuredPath);
+    }
+
+    public static string GetEncryptionKeysPath()
+    {
+        var configuredPath = Environment.GetEnvironmentVariable("ENCRYPTION_KEYS");
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return EnsureDirectory(configuredPath);
+        }
+
+        return EnsureDirectory(Path.Combine(GetConfigDirectory(), "keys"));
+    }
+
+    public static string GetConfigDirectory()
+    {
+        var configuredDirectory = Environment.GetEnvironmentVariable("CONFIG_DIR");
+        if (!string.IsNullOrWhiteSpace(configuredDirectory))
+        {
+            return EnsureDirectory(configuredDirectory);
+        }
+
+        if (Directory.Exists(ContainerConfigPath))
+        {
+            return ContainerConfigPath;
+        }
+
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(localAppData))
+        {
+            return EnsureDirectory(Path.Combine(localAppData, "Lingarr", "config"));
+        }
+
+        return EnsureDirectory(Path.Combine(AppContext.BaseDirectory, "config"));
+    }
+
+    private static string ResolvePath(string configuredPath)
+    {
+        if (Path.IsPathRooted(configuredPath))
+        {
+            EnsureParentDirectory(configuredPath);
+            return configuredPath;
+        }
+
+        var configDirectory = GetConfigDirectory();
+        var resolvedPath = Path.Combine(configDirectory, configuredPath);
+        EnsureParentDirectory(resolvedPath);
+        return resolvedPath;
+    }
+
+    private static string EnsureDirectory(string path)
+    {
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static void EnsureParentDirectory(string filePath)
+    {
+        var parent = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(parent))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(parent);
     }
 
     private static string GetPostgresConnectionString()
