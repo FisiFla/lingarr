@@ -253,7 +253,7 @@ public static class ServiceCollectionExtensions
             { "DB_PORT", Environment.GetEnvironmentVariable("DB_PORT") ?? "3306" },
             { "DB_DATABASE", Environment.GetEnvironmentVariable("DB_DATABASE") ?? "Lingarr" },
             { "DB_USERNAME", Environment.GetEnvironmentVariable("DB_USERNAME") ?? "Lingarr" },
-            { "DB_PASSWORD", Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "Secret1234" }
+            { "DB_PASSWORD", Environment.GetEnvironmentVariable("DB_PASSWORD") ?? throw new InvalidOperationException("DB_PASSWORD environment variable is required for MySQL") }
         };
 
         var connectionString =
@@ -278,7 +278,7 @@ public static class ServiceCollectionExtensions
             { "DB_PORT", Environment.GetEnvironmentVariable("DB_PORT") ?? "5432" },
             { "DB_DATABASE", Environment.GetEnvironmentVariable("DB_DATABASE") ?? "Lingarr" },
             { "DB_USERNAME", Environment.GetEnvironmentVariable("DB_USERNAME") ?? "Lingarr" },
-            { "DB_PASSWORD", Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "Secret1234" }
+            { "DB_PASSWORD", Environment.GetEnvironmentVariable("DB_PASSWORD") ?? throw new InvalidOperationException("DB_PASSWORD environment variable is required for PostgreSQL") }
         };
 
         var connectionString =

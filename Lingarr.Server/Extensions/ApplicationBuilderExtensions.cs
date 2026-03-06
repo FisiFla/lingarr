@@ -31,6 +31,7 @@ public static class ApplicationBuilderExtensions
         }
 
         app.UseAuthentication();
+        app.UseAuthorization();
         app.MapControllers();
         app.UseStaticFiles();
         app.ConfigureSpa();
@@ -89,7 +90,7 @@ public static class ApplicationBuilderExtensions
             {
                 encryptionService.Decrypt(value);
             }
-            catch
+            catch (System.Security.Cryptography.CryptographicException)
             {
                 await settingService.SetEncryptedSetting(key, value);
                 Console.WriteLine($"Migrated '{key}' to encrypted storage.");
