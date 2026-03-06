@@ -11,7 +11,14 @@
                     @save="saveNotification?.show()"
                     @update:chain="chainServiceTypes = $event" />
 
-                <div v-for="service in chainServiceTypes" :key="service">
+                <div
+                    v-for="service in chainServiceTypes"
+                    :key="service"
+                    v-show="getServiceConfig(service)"
+                    class="mt-4 rounded border border-accent/20 p-3">
+                    <h3 class="mb-2 text-sm font-semibold text-accent">
+                        {{ getServiceLabel(service) }} Configuration
+                    </h3>
                     <component
                         :is="getServiceConfig(service)"
                         v-if="getServiceConfig(service)"
@@ -75,6 +82,24 @@ const aiServiceTypes = [
 const hasAiService = computed(() =>
     chainServiceTypes.value.some((st) => aiServiceTypes.includes(st as any))
 )
+
+const serviceLabels: Record<string, string> = {
+    anthropic: 'Anthropic',
+    bing: 'Bing',
+    deepl: 'DeepL',
+    deepseek: 'DeepSeek',
+    gemini: 'Gemini',
+    google: 'Google',
+    libretranslate: 'LibreTranslate',
+    localai: 'Local AI',
+    microsoft: 'Microsoft',
+    openai: 'OpenAI',
+    yandex: 'Yandex'
+}
+
+function getServiceLabel(serviceType: string): string {
+    return serviceLabels[serviceType] ?? serviceType
+}
 
 function getServiceConfig(serviceType: string) {
     switch (serviceType) {
