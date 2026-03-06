@@ -58,6 +58,25 @@ public class AuthService : IAuthService
         }
     }
 
+    public string HashPassword(string password)
+    {
+        // random salt
+        var salt = new byte[128 / 8];
+        using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(salt);
+        }
+
+        var hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+            password: password,
+            salt: salt,
+            prf: KeyDerivationPrf.HMACSHA256,
+            iterationCount: 100000,
+            numBytesRequested: 256 / 8));
+
+        return $"{Convert.ToBase64String(salt)}:{hashed}";
+    }
+
     public async Task<User?> GetUserByUsername(string username)
     {
         return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
@@ -94,25 +113,6 @@ public class AuthService : IAuthService
         return CryptographicOperations.FixedTimeEquals(
             Encoding.UTF8.GetBytes(apiKey),
             Encoding.UTF8.GetBytes(storedApiKey));
-    }
-
-    private static string HashPassword(string password)
-    {
-        // random salt
-        var salt = new byte[128 / 8];
-        using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(salt);
-        }
-
-        var hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-            password: password,
-            salt: salt,
-            prf: KeyDerivationPrf.HMACSHA256,
-            iterationCount: 100000,
-            numBytesRequested: 256 / 8));
-
-        return $"{Convert.ToBase64String(salt)}:{hashed}";
     }
 
     public async Task<bool> HasAnyUsers()

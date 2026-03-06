@@ -2,6 +2,7 @@ using Lingarr.Server.Attributes;
 using Lingarr.Server.Interfaces.Services;
 using Lingarr.Server.Models;
 using Lingarr.Server.Models.FileSystem;
+using Lingarr.Server.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lingarr.Server.Controllers;
@@ -12,6 +13,8 @@ namespace Lingarr.Server.Controllers;
 public class SubtitleController : ControllerBase
 {
     private readonly ISubtitleService _subtitleService;
+    private static readonly string[] AllowedRoots = (Environment.GetEnvironmentVariable("ALLOWED_MEDIA_PATHS") ?? "/media,/movies,/tv")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     public SubtitleController(ISubtitleService subtitleService)
     {
@@ -28,10 +31,7 @@ public class SubtitleController : ControllerBase
     public async Task<ActionResult<List<Subtitles>>> GetAllSubtitles([FromBody] SubtitlePath subtitlePath)
     {
         var resolvedPath = Path.GetFullPath(subtitlePath.Path);
-        string[] allowedRoots = (Environment.GetEnvironmentVariable("ALLOWED_MEDIA_PATHS") ?? "/media,/movies,/tv")
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        if (!allowedRoots.Any(root => resolvedPath.StartsWith(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase)))
+        if (!PathSecurity.IsPathUnderAnyRoot(resolvedPath, AllowedRoots))
         {
             return BadRequest("Path is outside allowed media directories.");
         }

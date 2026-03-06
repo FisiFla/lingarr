@@ -77,8 +77,8 @@
                                         :type="INPUT_TYPE.PASSWORD"
                                         label="Password (required)"
                                         placeholder="Enter password"
-                                        :min-length="4"
-                                        error-message="Password must be at least 4 characters long and match"
+                                        :min-length="8"
+                                        error-message="Password must be at least 8 characters long and match"
                                         @update:validation="authStore.setPasswordValidation" />
 
                                     <InputComponent
@@ -88,8 +88,8 @@
                                         :type="INPUT_TYPE.PASSWORD"
                                         label="Confirm Password (required)"
                                         placeholder="Confirm your password"
-                                        :min-length="4"
-                                        error-message="Password must be at least 4 characters long and match"
+                                        :min-length="8"
+                                        error-message="Password must be at least 8 characters long and match"
                                         @update:validation="
                                             authStore.setConfirmPasswordValidation
                                         " />
@@ -168,8 +168,8 @@
                                         :type="INPUT_TYPE.PASSWORD"
                                         label="New Password (optional)"
                                         placeholder="Leave blank to keep current password"
-                                        :min-length="4"
-                                        error-message="Password must be at least 4 characters long and match"
+                                        :min-length="8"
+                                        error-message="Password must be at least 8 characters long and match"
                                         @update:validation="authStore.setPasswordValidation" />
 
                                     <InputComponent
@@ -179,8 +179,8 @@
                                         :type="INPUT_TYPE.PASSWORD"
                                         label="Confirm New Password (optional)"
                                         placeholder="Confirm your new password"
-                                        :min-length="4"
-                                        error-message="Password must be at least 4 characters long and match"
+                                        :min-length="8"
+                                        error-message="Password must be at least 8 characters long and match"
                                         @update:validation="
                                             authStore.setConfirmPasswordValidation
                                         " />

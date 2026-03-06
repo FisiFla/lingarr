@@ -81,6 +81,12 @@ public class AuthController : ControllerBase
     {
         try
         {
+            var accessCheck = await EnsureOnboardingModeOrAuthenticated();
+            if (accessCheck != null)
+            {
+                return accessCheck;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Username) || request.Username.Length < 2)
             {
                 return BadRequest(new { message = "Username must be at least 2 characters long" });
@@ -172,6 +178,12 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult> CompleteOnboarding([FromBody] OnboardingRequest request)
     {
+        var accessCheck = await EnsureOnboardingModeOrAuthenticated();
+        if (accessCheck != null)
+        {
+            return accessCheck;
+        }
+
         await _settingService.SetSettings(new Dictionary<string, string>
         {
             { SettingKeys.Authentication.AuthEnabled, request.EnableUserAuth },
@@ -190,6 +202,12 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<ApiKeyResponse>> GenerateNewApiKey()
     {
+        var accessCheck = await EnsureOnboardingModeOrAuthenticated();
+        if (accessCheck != null)
+        {
+            return accessCheck;
+        }
+
         var apiKey = _authService.GenerateApiKey();
         await _settingService.SetEncryptedSetting(SettingKeys.Authentication.ApiKey, apiKey);
         return Ok(new ApiKeyResponse
@@ -263,7 +281,7 @@ public class AuthController : ControllerBase
                 return BadRequest(new { message = "Password must be at least 8 characters long" });
             }
 
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            user.PasswordHash = _authService.HashPassword(request.Password);
         }
 
         await _context.SaveChangesAsync();
@@ -298,5 +316,50 @@ public class AuthController : ControllerBase
         _logger.LogInformation("User {Username} deleted", user.Username);
 
         return Ok(new { message = "User deleted successfully" });
+    }
+
+    /// <summary>
+    /// Allows unauthenticated access only during first-time onboarding.
+    /// After onboarding is complete, changes require a logged-in user or valid API key.
+    /// </summary>
+    private async Task<ActionResult?> EnsureOnboardingModeOrAuthenticated()
+    {
+        var onboardingCompleted = await _settingService.GetSetting(SettingKeys.Authentication.OnboardingCompleted);
+        var hasUsers = await _authService.HasAnyUsers();
+        var onboardingMode = onboardingCompleted != "true" || !hasUsers;
+        if (onboardingMode)
+        {
+            return null;
+        }
+
+        var authEnabled = await _settingService.GetSetting(SettingKeys.Authentication.AuthEnabled);
+        if (authEnabled == "false")
+        {
+            return null;
+        }
+
+        if (await IsCookieOrApiKeyAuthenticated())
+        {
+            return null;
+        }
+
+        _logger.LogWarning("Blocked unauthenticated onboarding/auth mutation request.");
+        return Unauthorized(new { message = "Authentication required" });
+    }
+
+    private async Task<bool> IsCookieOrApiKeyAuthenticated()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            return true;
+        }
+
+        if (!Request.Headers.TryGetValue("X-Api-Key", out var apiKeyValues))
+        {
+            return false;
+        }
+
+        var apiKey = apiKeyValues.FirstOrDefault();
+        return !string.IsNullOrWhiteSpace(apiKey) && await _authService.ValidateApiKey(apiKey);
     }
 }

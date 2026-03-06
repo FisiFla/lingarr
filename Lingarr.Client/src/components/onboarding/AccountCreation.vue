@@ -24,8 +24,8 @@
             :validation-type="INPUT_VALIDATION_TYPE.STRING"
             :type="INPUT_TYPE.PASSWORD"
             placeholder="Enter your password"
-            :min-length="4"
-            error-message="Password must be at least 4 characters long and match"
+            :min-length="8"
+            error-message="Password must be at least 8 characters long and match"
             @update:validation="(valid: boolean) => updateValidation('password', valid)" />
 
         <InputComponent
@@ -35,8 +35,8 @@
             :validation-type="INPUT_VALIDATION_TYPE.STRING"
             :type="INPUT_TYPE.PASSWORD"
             placeholder="Confirm your password"
-            :min-length="4"
-            error-message="Password must be at least 4 characters long and match"
+            :min-length="8"
+            error-message="Password must be at least 8 characters long and match"
             @update:validation="(valid: boolean) => updateValidation('confirmPassword', valid)" />
     </div>
 </template>

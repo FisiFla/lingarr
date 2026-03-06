@@ -32,7 +32,12 @@ public class HealthController : ControllerBase
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await _dbContext.Database.CanConnectAsync(cts.Token);
+            var canConnect = await _dbContext.Database.CanConnectAsync(cts.Token);
+            if (!canConnect)
+            {
+                return StatusCode(503, new { status = "unhealthy", timestamp = DateTime.UtcNow });
+            }
+
             return Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
         }
         catch

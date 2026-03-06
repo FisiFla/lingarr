@@ -17,6 +17,12 @@ public interface IAuthService
     bool VerifyPassword(string password, string passwordHash);
 
     /// <summary>
+    /// Hashes a plaintext password for persistent storage.
+    /// </summary>
+    /// <param name="password">The plaintext password.</param>
+    string HashPassword(string password);
+
+    /// <summary>
     /// Retrieves a user from the database by username.
     /// </summary>
     /// <param name="username">The username to search for.</param>

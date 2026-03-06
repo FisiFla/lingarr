@@ -135,7 +135,7 @@ const canProceed = computed(() => {
             isValid.value.password &&
             isValid.value.confirmPassword &&
             onboardingStore.password === onboardingStore.confirmPassword &&
-            onboardingStore.password.length >= 4
+            onboardingStore.password.length >= 8
         )
     }
     return true

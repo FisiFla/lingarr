@@ -1,6 +1,7 @@
 ﻿using Lingarr.Server.Attributes;
 using Lingarr.Server.Interfaces.Services;
 using Lingarr.Server.Models.FileSystem;
+using Lingarr.Server.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lingarr.Server.Controllers;
@@ -45,7 +46,7 @@ public class DirectoryController : ControllerBase
         try
         {
             var resolvedPath = Path.GetFullPath(path);
-            if (!AllowedRoots.Any(root => resolvedPath.StartsWith(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase)))
+            if (!PathSecurity.IsPathUnderAnyRoot(resolvedPath, AllowedRoots))
             {
                 return BadRequest("Path is outside allowed media directories. Set ALLOWED_MEDIA_PATHS to configure allowed roots.");
             }
