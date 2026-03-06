@@ -3,51 +3,58 @@
         <span class="font-semibold">Service priority (drag to reorder):</span>
 
         <!-- Active chain -->
-        <div class="flex flex-col space-y-1">
+        <div class="flex flex-col space-y-2">
             <div
                 v-for="(item, index) in activeServices"
                 :key="item.serviceType"
                 draggable="true"
-                class="flex items-center justify-between rounded border border-accent/30 bg-accent/10 p-2 cursor-move"
+                class="rounded border border-accent/30 bg-accent/10 p-3 cursor-move"
                 @dragstart="dragStart(index)"
                 @dragover.prevent="dragOver(index)"
                 @drop="drop(index)">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm font-medium">{{ index + 1 }}.</span>
-                    <span>{{ getLabel(item.serviceType) }}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <input
-                        type="number"
-                        :value="item.monthlyLimitChars"
-                        :placeholder="'unlimited'"
-                        class="w-32 rounded border border-accent/30 bg-secondary px-2 py-1 text-sm"
-                        @change="updateLimit(index, ($event.target as HTMLInputElement).value)" />
-                    <span class="text-xs opacity-60">chars/mo</span>
-                    <div
-                        v-if="item.monthlyLimitChars"
-                        class="h-1.5 w-20 rounded-full bg-accent/20 overflow-hidden">
-                        <div
-                            class="h-full rounded-full transition-all"
-                            :class="usagePercent(item) > 90 ? 'bg-red-500' : 'bg-green-500'"
-                            :style="{ width: Math.min(usagePercent(item), 100) + '%' }">
-                        </div>
+                <!-- Row 1: Name and Remove -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-medium opacity-50">{{ index + 1 }}.</span>
+                        <span class="font-medium">{{ getLabel(item.serviceType) }}</span>
                     </div>
-                    <span v-if="item.monthlyLimitChars" class="text-xs opacity-60">
-                        {{ formatChars(item.charsUsed) }}/{{ formatChars(item.monthlyLimitChars) }}
-                    </span>
                     <button
-                        class="ml-2 text-red-400 hover:text-red-300 text-sm"
+                        class="text-red-400 hover:text-red-300 text-xs"
                         @click="removeService(index)">
                         Remove
                     </button>
+                </div>
+                <!-- Row 2: Quota -->
+                <div class="mt-2 flex items-center gap-3">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs opacity-50">Limit:</span>
+                        <input
+                            type="number"
+                            :value="item.monthlyLimitChars"
+                            :placeholder="'unlimited'"
+                            class="w-28 rounded border border-accent/30 bg-secondary px-2 py-1 text-xs"
+                            @change="updateLimit(index, ($event.target as HTMLInputElement).value)" />
+                        <span class="text-xs opacity-50">chars/mo</span>
+                    </div>
+                    <div v-if="item.monthlyLimitChars" class="flex items-center gap-2 flex-1">
+                        <div class="h-1.5 flex-1 rounded-full bg-accent/20 overflow-hidden">
+                            <div
+                                class="h-full rounded-full transition-all"
+                                :class="usagePercent(item) > 90 ? 'bg-red-500' : 'bg-green-500'"
+                                :style="{ width: Math.min(usagePercent(item), 100) + '%' }">
+                            </div>
+                        </div>
+                        <span class="text-xs opacity-50 whitespace-nowrap">
+                            {{ formatChars(item.charsUsed) }} / {{ formatChars(item.monthlyLimitChars) }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Available services -->
         <div v-if="availableServices.length > 0" class="flex flex-col space-y-1">
-            <span class="text-sm opacity-60">Available services:</span>
+            <span class="text-sm opacity-50">Available services:</span>
             <div class="flex flex-wrap gap-2">
                 <button
                     v-for="service in availableServices"
