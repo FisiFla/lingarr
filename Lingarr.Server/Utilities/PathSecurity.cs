@@ -4,8 +4,14 @@ public static class PathSecurity
 {
     public static bool IsPathUnderAnyRoot(string path, IEnumerable<string> roots)
     {
-        var fullPath = Path.GetFullPath(path);
-        return roots.Any(root => IsPathUnderRoot(fullPath, root));
+        return TryResolvePathUnderAnyRoot(path, roots, out _);
+    }
+
+    public static bool TryResolvePathUnderAnyRoot(string path, IEnumerable<string> roots, out string fullPath)
+    {
+        var resolvedPath = Path.GetFullPath(path);
+        fullPath = resolvedPath;
+        return roots.Any(root => IsPathUnderRoot(resolvedPath, root));
     }
 
     private static bool IsPathUnderRoot(string fullPath, string root)
@@ -16,7 +22,7 @@ public static class PathSecurity
         }
 
         var fullRoot = EnsureTrailingSeparator(Path.GetFullPath(root));
-        var normalizedPath = EnsureTrailingSeparator(Path.GetFullPath(fullPath));
+        var normalizedPath = EnsureTrailingSeparator(fullPath);
         var comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
@@ -26,7 +32,7 @@ public static class PathSecurity
 
     private static string EnsureTrailingSeparator(string path)
     {
-        if (path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar))
+        if (path.EndsWith(Path.DirectorySeparatorChar))
         {
             return path;
         }

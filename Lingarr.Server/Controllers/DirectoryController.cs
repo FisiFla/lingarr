@@ -45,8 +45,7 @@ public class DirectoryController : ControllerBase
     {
         try
         {
-            var resolvedPath = Path.GetFullPath(path);
-            if (!PathSecurity.IsPathUnderAnyRoot(resolvedPath, AllowedRoots))
+            if (!PathSecurity.TryResolvePathUnderAnyRoot(path, AllowedRoots, out var resolvedPath))
             {
                 return BadRequest("Path is outside allowed media directories. Set ALLOWED_MEDIA_PATHS to configure allowed roots.");
             }

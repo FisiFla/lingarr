@@ -17,6 +17,12 @@ public interface IAuthService
     bool VerifyPassword(string password, string passwordHash);
 
     /// <summary>
+    /// Determines whether the password hash should be upgraded to the current format.
+    /// </summary>
+    /// <param name="passwordHash">The stored password hash.</param>
+    bool NeedsPasswordRehash(string passwordHash);
+
+    /// <summary>
     /// Hashes a plaintext password for persistent storage.
     /// </summary>
     /// <param name="password">The plaintext password.</param>

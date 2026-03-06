@@ -21,6 +21,7 @@ public class AuthController : ControllerBase
     private readonly ISettingService _settingService;
     private readonly ILogger<AuthController> _logger;
     private readonly LingarrDbContext _context;
+    private static readonly SemaphoreSlim OnboardingMutationLock = new(1, 1);
 
     public AuthController(IAuthService authService, ISettingService settingService, ILogger<AuthController> logger, LingarrDbContext context)
     {
@@ -46,6 +47,11 @@ public class AuthController : ControllerBase
         if (user == null || !_authService.VerifyPassword(request.Password, user.PasswordHash))
         {
             return Unauthorized(new { message = "Invalid username or password" });
+        }
+
+        if (_authService.NeedsPasswordRehash(user.PasswordHash))
+        {
+            user.PasswordHash = _authService.HashPassword(request.Password);
         }
 
         user.LastLoginAt = DateTime.UtcNow;
@@ -79,53 +85,56 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult> Signup([FromBody] SignupRequest request)
     {
-        try
+        return await ExecuteOnboardingMutationWithLock(async () =>
         {
-            var accessCheck = await EnsureOnboardingModeOrAuthenticated();
-            if (accessCheck != null)
+            try
             {
-                return accessCheck;
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Username) || request.Username.Length < 2)
-            {
-                return BadRequest(new { message = "Username must be at least 2 characters long" });
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
-            {
-                return BadRequest(new { message = "Password must be at least 8 characters long" });
-            }
-
-            // Create user and sign in
-            var user = await _authService.CreateUser(request.Username, request.Password);
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Name, user.Username)
-            };
-
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-
-            await HttpContext.SignInAsync(
-                "Cookies",
-                claimsPrincipal,
-                new AuthenticationProperties
+                var accessCheck = await EnsureOnboardingModeOrAuthenticated();
+                if (accessCheck != null)
                 {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
-                });
+                    return accessCheck;
+                }
 
-            _logger.LogInformation("User {Username} created successfully", user.Username);
+                if (string.IsNullOrWhiteSpace(request.Username) || request.Username.Length < 2)
+                {
+                    return BadRequest(new { message = "Username must be at least 2 characters long" });
+                }
 
-            return Ok();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during signup");
-            return StatusCode(500, new { message = "An error occurred during signup" });
-        }
+                if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+                {
+                    return BadRequest(new { message = "Password must be at least 8 characters long" });
+                }
+
+                // Create user and sign in
+                var user = await _authService.CreateUser(request.Username, request.Password);
+                var claims = new List<Claim>
+                {
+                    new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new(ClaimTypes.Name, user.Username)
+                };
+
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+                await HttpContext.SignInAsync(
+                    "Cookies",
+                    claimsPrincipal,
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = true,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+                    });
+
+                _logger.LogInformation("User {Username} created successfully", user.Username);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during signup");
+                return StatusCode(500, new { message = "An error occurred during signup" });
+            }
+        });
     }
 
     /// <summary>
@@ -178,19 +187,22 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult> CompleteOnboarding([FromBody] OnboardingRequest request)
     {
-        var accessCheck = await EnsureOnboardingModeOrAuthenticated();
-        if (accessCheck != null)
+        return await ExecuteOnboardingMutationWithLock(async () =>
         {
-            return accessCheck;
-        }
+            var accessCheck = await EnsureOnboardingModeOrAuthenticated();
+            if (accessCheck != null)
+            {
+                return accessCheck;
+            }
 
-        await _settingService.SetSettings(new Dictionary<string, string>
-        {
-            { SettingKeys.Authentication.AuthEnabled, request.EnableUserAuth },
-            { SettingKeys.Authentication.OnboardingCompleted, "true" }
+            await _settingService.SetSettings(new Dictionary<string, string>
+            {
+                { SettingKeys.Authentication.AuthEnabled, request.EnableUserAuth },
+                { SettingKeys.Authentication.OnboardingCompleted, "true" }
+            });
+
+            return Ok();
         });
-
-        return Ok();
     }
 
     /// <summary>
@@ -202,17 +214,20 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<ApiKeyResponse>> GenerateNewApiKey()
     {
-        var accessCheck = await EnsureOnboardingModeOrAuthenticated();
-        if (accessCheck != null)
+        return await ExecuteOnboardingMutationWithLock(async () =>
         {
-            return accessCheck;
-        }
+            var accessCheck = await EnsureOnboardingModeOrAuthenticated();
+            if (accessCheck != null)
+            {
+                return accessCheck;
+            }
 
-        var apiKey = _authService.GenerateApiKey();
-        await _settingService.SetEncryptedSetting(SettingKeys.Authentication.ApiKey, apiKey);
-        return Ok(new ApiKeyResponse
-        {
-            ApiKey = apiKey
+            var apiKey = _authService.GenerateApiKey();
+            await _settingService.SetEncryptedSetting(SettingKeys.Authentication.ApiKey, apiKey);
+            return Ok(new ApiKeyResponse
+            {
+                ApiKey = apiKey
+            });
         });
     }
 
@@ -324,16 +339,11 @@ public class AuthController : ControllerBase
     /// </summary>
     private async Task<ActionResult?> EnsureOnboardingModeOrAuthenticated()
     {
-        var onboardingCompleted = await _settingService.GetSetting(SettingKeys.Authentication.OnboardingCompleted);
         var hasUsers = await _authService.HasAnyUsers();
-        var onboardingMode = onboardingCompleted != "true" || !hasUsers;
-        if (onboardingMode)
-        {
-            return null;
-        }
 
-        var authEnabled = await _settingService.GetSetting(SettingKeys.Authentication.AuthEnabled);
-        if (authEnabled == "false")
+        // Bootstrap mode is only allowed while no users exist yet.
+        // Once a user exists, mutation endpoints always require authentication.
+        if (!hasUsers)
         {
             return null;
         }
@@ -361,5 +371,18 @@ public class AuthController : ControllerBase
 
         var apiKey = apiKeyValues.FirstOrDefault();
         return !string.IsNullOrWhiteSpace(apiKey) && await _authService.ValidateApiKey(apiKey);
+    }
+
+    private static async Task<T> ExecuteOnboardingMutationWithLock<T>(Func<Task<T>> action)
+    {
+        await OnboardingMutationLock.WaitAsync();
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            OnboardingMutationLock.Release();
+        }
     }
 }

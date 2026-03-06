@@ -34,28 +34,37 @@ public class AuthService : IAuthService
     {
         try
         {
-            var parts = passwordHash.Split(':');
+            if (IsBcryptHash(passwordHash))
+            {
+                return BCrypt.Net.BCrypt.Verify(password, passwordHash);
+            }
+
+            var parts = passwordHash.Split(':', 2);
             if (parts.Length != 2)
             {
                 return false;
             }
 
             var salt = Convert.FromBase64String(parts[0]);
-            var storedHash = parts[1];
-
-            var hashToVerify = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+            var storedHash = Convert.FromBase64String(parts[1]);
+            var hashToVerify = KeyDerivation.Pbkdf2(
                 password: password,
                 salt: salt,
                 prf: KeyDerivationPrf.HMACSHA256,
                 iterationCount: 100000,
-                numBytesRequested: 256 / 8));
+                numBytesRequested: 256 / 8);
 
-            return hashToVerify == storedHash;
+            return CryptographicOperations.FixedTimeEquals(hashToVerify, storedHash);
         }
         catch
         {
             return false;
         }
+    }
+
+    public bool NeedsPasswordRehash(string passwordHash)
+    {
+        return IsBcryptHash(passwordHash);
     }
 
     public string HashPassword(string password)
@@ -118,5 +127,10 @@ public class AuthService : IAuthService
     public async Task<bool> HasAnyUsers()
     {
         return await _context.Users.AnyAsync();
+    }
+
+    private static bool IsBcryptHash(string passwordHash)
+    {
+        return !string.IsNullOrWhiteSpace(passwordHash) && passwordHash.StartsWith("$2", StringComparison.Ordinal);
     }
 }

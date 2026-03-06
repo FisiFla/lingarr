@@ -30,8 +30,7 @@ public class SubtitleController : ControllerBase
     [HttpPost("all")]
     public async Task<ActionResult<List<Subtitles>>> GetAllSubtitles([FromBody] SubtitlePath subtitlePath)
     {
-        var resolvedPath = Path.GetFullPath(subtitlePath.Path);
-        if (!PathSecurity.IsPathUnderAnyRoot(resolvedPath, AllowedRoots))
+        if (!PathSecurity.TryResolvePathUnderAnyRoot(subtitlePath.Path, AllowedRoots, out var resolvedPath))
         {
             return BadRequest("Path is outside allowed media directories.");
         }
