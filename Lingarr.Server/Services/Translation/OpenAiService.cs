@@ -396,7 +396,7 @@ public class OpenAiService : BaseLanguageService, ITranslationService, IBatchTra
 
         try
         {
-            var client = new HttpClient();
+            using var client = new HttpClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 

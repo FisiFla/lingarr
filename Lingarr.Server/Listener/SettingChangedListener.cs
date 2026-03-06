@@ -31,6 +31,18 @@ public class SettingChangedListener
 
     public async void OnSettingChanged(SettingService settingService, string setting)
     {
+        try
+        {
+            await OnSettingChangedAsync(settingService, setting);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in OnSettingChanged for setting: {Setting}", setting);
+        }
+    }
+
+    private async Task OnSettingChangedAsync(SettingService settingService, string setting)
+    {
         var settingGroups = new Dictionary<string, (string actionType, string actionName, string[] keys)>
         {
             {

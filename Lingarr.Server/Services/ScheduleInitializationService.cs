@@ -21,19 +21,23 @@ public class ScheduleInitializationService : IHostedService
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _appLifetime.ApplicationStarted.Register(OnApplicationStarted);
+        _appLifetime.ApplicationStarted.Register(() =>
+        {
+            // Fire-and-forget with proper exception handling.
+            // ApplicationStarted.Register only accepts Action, so async void is unavoidable here,
+            // but we ensure exceptions are always caught and logged.
+            _ = InitializeAsync();
+        });
         return Task.CompletedTask;
     }
-    
+
     /// <inheritdoc />
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-    
+
     /// <summary>
-    /// This method is called when the application starts and performs the initialization of the <see cref="_scheduleService"/>.
+    /// Performs the initialization of the <see cref="_scheduleService"/> when the application starts.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="Exception">Logs any exception that occurs during the initialization of the <see cref="_scheduleService"/>.</exception>
-    private async void OnApplicationStarted()
+    private async Task InitializeAsync()
     {
         try
         {

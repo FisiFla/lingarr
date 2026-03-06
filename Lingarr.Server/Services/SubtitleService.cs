@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lingarr.Server.Interfaces.Services;
@@ -245,12 +244,12 @@ public class SubtitleService : ISubtitleService
             {
                 case > 0 when overlapTime > 0:
                     current.EndTime = next.StartTime - buffer;
-                    Console.WriteLine(
-                        $"Couldn't reach optimal duration for subtitle #{current.Position} due to timing constraints");
+                    _logger.LogDebug("Couldn't reach optimal duration for subtitle #{Position} due to timing constraints",
+                        current.Position);
                     break;
                 case > 0 when optimalTimeNeeded > 0:
-                    Console.WriteLine(
-                        $"Subtitle #{current.Position} couldn't reach optimal duration of {optimalDuration}ms, achieved {current.EndTime - current.StartTime}ms");
+                    _logger.LogDebug("Subtitle #{Position} couldn't reach optimal duration of {OptimalDuration}ms, achieved {AchievedDuration}ms",
+                        current.Position, optimalDuration, current.EndTime - current.StartTime);
                     break;
                 default:
                 {
@@ -268,8 +267,8 @@ public class SubtitleService : ISubtitleService
             }
 
             fixCount++;
-            Console.WriteLine(
-                $"Timing adjusted for subtitle #{current.Position} based on content length ({wordCount} words)");
+            _logger.LogDebug("Timing adjusted for subtitle #{Position} based on content length ({WordCount} words)",
+                current.Position, wordCount);
         }
 
         if (subtitles.Count > 1)
@@ -292,8 +291,8 @@ public class SubtitleService : ISubtitleService
                 {
                     first.EndTime = second.StartTime - buffer;
                     fixCount++;
-                    Console.WriteLine(
-                        $"Adjusted first subtitle #{first.Position} to avoid overlap with #{second.Position}");
+                    _logger.LogDebug("Adjusted first subtitle #{Position} to avoid overlap with #{NextPosition}",
+                        first.Position, second.Position);
                 }
                 else if (availableForward > 0 && (first.EndTime - first.StartTime) < firstOptimalDuration)
                 {
@@ -301,8 +300,8 @@ public class SubtitleService : ISubtitleService
                     var extension = Math.Min(extensionNeeded, availableForward);
                     first.EndTime += extension;
                     fixCount++;
-                    Console.WriteLine(
-                        $"Extended first subtitle #{first.Position} duration based on content length ({firstWordCount} words)");
+                    _logger.LogDebug("Extended first subtitle #{Position} duration based on content length ({WordCount} words)",
+                        first.Position, firstWordCount);
                 }
             }
 
@@ -320,12 +319,12 @@ public class SubtitleService : ISubtitleService
                 }
 
                 fixCount++;
-                Console.WriteLine(
-                    $"Adjusted last subtitle #{last.Position} to avoid overlap with #{secondLast.Position}");
+                _logger.LogDebug("Adjusted last subtitle #{Position} to avoid overlap with #{PrevPosition}",
+                    last.Position, secondLast.Position);
             }
         }
 
-        Console.WriteLine($"Fixed {fixCount} subtitle timings with content aware adjustments");
+        _logger.LogInformation("Fixed {FixCount} subtitle timings with content-aware adjustments", fixCount);
         return subtitles;
     }
 
@@ -484,19 +483,12 @@ public class SubtitleService : ISubtitleService
     public void AddTranslatorInfo(string serviceType, List<SubtitleItem> translatedSubtitles,
         ITranslationService translationService)
     {
-        // Check if the service has a ModelName property
         var serviceName = char.ToUpper(serviceType[0]) + serviceType[1..];
 
-        var modelField = translationService.GetType().GetField("_model",
-            BindingFlags.NonPublic | BindingFlags.Instance);
-
-        if (modelField != null)
+        var modelName = translationService.ModelName;
+        if (!string.IsNullOrEmpty(modelName))
         {
-            var modelName = modelField.GetValue(translationService)?.ToString();
-            if (!string.IsNullOrEmpty(modelName))
-            {
-                serviceName += " - " + modelName;
-            }
+            serviceName += " - " + modelName;
         }
 
         var introText = $"# Translated with Lingarr using {serviceName} translator #";

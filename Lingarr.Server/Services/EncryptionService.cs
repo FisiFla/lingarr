@@ -21,13 +21,26 @@ public class EncryptionService : IEncryptionService
             return value;
         }
 
+        return _protector.Unprotect(value);
+    }
+
+    /// <summary>
+    /// Attempts to decrypt a value. Returns true if decryption succeeded, false if the value
+    /// is not encrypted (used during migration to detect unencrypted values).
+    /// </summary>
+    public bool TryDecrypt(string value, out string decrypted)
+    {
+        decrypted = value;
+        if (string.IsNullOrEmpty(value)) return true;
+
         try
         {
-            return _protector.Unprotect(value);
+            decrypted = _protector.Unprotect(value);
+            return true;
         }
         catch (System.Security.Cryptography.CryptographicException)
         {
-            return value;
+            return false;
         }
     }
 }

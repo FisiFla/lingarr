@@ -86,11 +86,7 @@ public static class ApplicationBuilderExtensions
             var value = await settingService.GetSetting(key);
             if (string.IsNullOrEmpty(value)) continue;
 
-            try
-            {
-                encryptionService.Decrypt(value);
-            }
-            catch (System.Security.Cryptography.CryptographicException)
+            if (!encryptionService.TryDecrypt(value, out _))
             {
                 await settingService.SetEncryptedSetting(key, value);
                 Console.WriteLine($"Migrated '{key}' to encrypted storage.");
