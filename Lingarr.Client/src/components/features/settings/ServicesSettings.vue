@@ -1,31 +1,25 @@
-﻿<template>
+<template>
     <CardComponent title="Services">
         <template #description>
-            Configure the translation service for subtitle localization.
+            Configure translation services in priority order. Jobs will fall through the chain if a
+            service fails or exceeds its quota.
         </template>
         <template #content>
             <SaveNotification ref="saveNotification" />
             <div class="flex flex-col space-y-2">
-                <span class="font-semibold">Select translation service:</span>
-                <SelectComponent v-model:selected="serviceType" :options="serviceOptions" />
-                <component
-                    :is="serviceConfigComponent"
-                    v-if="serviceConfigComponent"
-                    @save="saveNotification?.show()" />
+                <ServiceChainSettings
+                    @save="saveNotification?.show()"
+                    @update:chain="chainServiceTypes = $event" />
+
+                <div v-for="service in chainServiceTypes" :key="service">
+                    <component
+                        :is="getServiceConfig(service)"
+                        v-if="getServiceConfig(service)"
+                        @save="saveNotification?.show()" />
+                </div>
             </div>
 
-            <div
-                v-if="
-                    [
-                        SERVICE_TYPE.ANTHROPIC,
-                        SERVICE_TYPE.DEEPSEEK,
-                        SERVICE_TYPE.GEMINI,
-                        SERVICE_TYPE.LOCALAI,
-                        SERVICE_TYPE.OPENAI
-                    ].includes(
-                        serviceType as 'openai' | 'anthropic' | 'localai' | 'gemini' | 'deepseek'
-                    )
-                ">
+            <div v-if="hasAiService">
                 <div class="flex flex-col gap-4">
                     <div class="flex flex-col space-x-2">
                         <span class="font-semibold">
@@ -51,14 +45,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useSettingStore } from '@/store/setting'
-import { SETTINGS, SERVICE_TYPE } from '@/ts'
+import { SERVICE_TYPE } from '@/ts'
 import CardComponent from '@/components/common/CardComponent.vue'
-import SelectComponent from '@/components/common/SelectComponent.vue'
 import SaveNotification from '@/components/common/SaveNotification.vue'
+import ServiceChainSettings from '@/components/features/settings/ServiceChainSettings.vue'
 import LibreTranslateConfig from '@/components/features/settings/services/LibreTranslateConfig.vue'
 import DeepLConfig from '@/components/features/settings/services/DeepLConfig.vue'
-import FreeServiceConfig from '@/components/features/settings/services/FreeServiceConfig.vue'
 import AnthropicConfig from '@/components/features/settings/services/AnthropicConfig.vue'
 import OpenAiConfig from '@/components/features/settings/services/OpenAiConfig.vue'
 import LocalAiConfig from '@/components/features/settings/services/LocalAiConfig.vue'
@@ -69,33 +61,23 @@ import ButtonComponent from '@/components/common/ButtonComponent.vue'
 import ArrowRight from '@/components/icons/ArrowRight.vue'
 
 const saveNotification = ref<InstanceType<typeof SaveNotification> | null>(null)
-const settingsStore = useSettingStore()
 const router = useRouter()
+const chainServiceTypes = ref<string[]>([])
 
-const serviceType = computed({
-    get: () => settingsStore.getSetting(SETTINGS.SERVICE_TYPE) as string,
-    set: (newValue: string) => {
-        settingsStore.updateSetting(SETTINGS.SERVICE_TYPE, newValue, true)
-        saveNotification.value?.show()
-    }
-})
-
-const serviceOptions = [
-    { value: SERVICE_TYPE.ANTHROPIC, label: 'Anthropic' },
-    { value: SERVICE_TYPE.BING, label: 'Bing' },
-    { value: SERVICE_TYPE.DEEPL, label: 'DeepL' },
-    { value: SERVICE_TYPE.DEEPSEEK, label: 'DeepSeek' },
-    { value: SERVICE_TYPE.GEMINI, label: 'Gemini' },
-    { value: SERVICE_TYPE.GOOGLE, label: 'Google' },
-    { value: SERVICE_TYPE.LIBRETRANSLATE, label: 'LibreTranslate' },
-    { value: SERVICE_TYPE.LOCALAI, label: 'Local AI (Custom)' },
-    { value: SERVICE_TYPE.MICROSOFT, label: 'Microsoft' },
-    { value: SERVICE_TYPE.OPENAI, label: 'OpenAI' },
-    { value: SERVICE_TYPE.YANDEX, label: 'Yandex' }
+const aiServiceTypes = [
+    SERVICE_TYPE.ANTHROPIC,
+    SERVICE_TYPE.DEEPSEEK,
+    SERVICE_TYPE.GEMINI,
+    SERVICE_TYPE.LOCALAI,
+    SERVICE_TYPE.OPENAI
 ]
 
-const serviceConfigComponent = computed(() => {
-    switch (serviceType.value) {
+const hasAiService = computed(() =>
+    chainServiceTypes.value.some((st) => aiServiceTypes.includes(st as any))
+)
+
+function getServiceConfig(serviceType: string) {
+    switch (serviceType) {
         case SERVICE_TYPE.LIBRETRANSLATE:
             return LibreTranslateConfig
         case SERVICE_TYPE.OPENAI:
@@ -110,13 +92,8 @@ const serviceConfigComponent = computed(() => {
             return GeminiConfig
         case SERVICE_TYPE.DEEPSEEK:
             return DeepSeekConfig
-        case SERVICE_TYPE.GOOGLE:
-        case SERVICE_TYPE.BING:
-        case SERVICE_TYPE.MICROSOFT:
-        case SERVICE_TYPE.YANDEX:
-            return FreeServiceConfig
         default:
             return null
     }
-})
+}
 </script>

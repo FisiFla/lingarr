@@ -1,5 +1,7 @@
-﻿using Lingarr.Core.Configuration;
+﻿using System.Text.Json;
+using Lingarr.Core.Configuration;
 using Lingarr.Core.Data;
+using Lingarr.Server.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lingarr.Server.Services;
@@ -8,11 +10,13 @@ public class StartupService : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<StartupService> _logger;
+    private readonly IServiceQuotaTracker _quotaTracker;
 
-    public StartupService(IServiceProvider serviceProvider, ILogger<StartupService> logger)
+    public StartupService(IServiceProvider serviceProvider, ILogger<StartupService> logger, IServiceQuotaTracker quotaTracker)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _quotaTracker = quotaTracker;
     }
 
     /// <summary>
@@ -37,6 +41,38 @@ public class StartupService : IHostedService
             SettingKeys.Integration.SonarrUrl,
             SettingKeys.Integration.SonarrApiKey
         ]);
+
+        // Load quota cache
+        await _quotaTracker.LoadAsync();
+
+        // Migrate service_type to service_chain if needed
+        var serviceChain = await dbContext.Settings
+            .FirstOrDefaultAsync(s => s.Key == SettingKeys.Translation.ServiceChain);
+        if (serviceChain == null || string.IsNullOrEmpty(serviceChain.Value))
+        {
+            var legacyServiceType = await dbContext.Settings
+                .FirstOrDefaultAsync(s => s.Key == SettingKeys.Translation.ServiceType);
+            if (legacyServiceType != null && !string.IsNullOrEmpty(legacyServiceType.Value))
+            {
+                var chain = JsonSerializer.Serialize(new[] { legacyServiceType.Value });
+                var existing = await dbContext.Settings
+                    .FirstOrDefaultAsync(s => s.Key == SettingKeys.Translation.ServiceChain);
+                if (existing != null)
+                {
+                    existing.Value = chain;
+                }
+                else
+                {
+                    dbContext.Settings.Add(new Lingarr.Core.Entities.Setting
+                    {
+                        Key = SettingKeys.Translation.ServiceChain,
+                        Value = chain
+                    });
+                }
+                await dbContext.SaveChangesAsync();
+                _logger.LogInformation("Migrated service_type '{ServiceType}' to service_chain", legacyServiceType.Value);
+            }
+        }
     }
 
     /// <summary>

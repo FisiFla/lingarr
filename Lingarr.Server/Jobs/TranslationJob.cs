@@ -1,8 +1,10 @@
-﻿using Hangfire;
+﻿using System.Text.Json;
+using Hangfire;
 using Lingarr.Core.Configuration;
 using Lingarr.Core.Data;
 using Lingarr.Core.Entities;
 using Lingarr.Core.Enum;
+using Lingarr.Server.Exceptions;
 using Lingarr.Server.Filters;
 using Lingarr.Server.Interfaces.Services;
 using Lingarr.Server.Interfaces.Services.Translation;
@@ -26,6 +28,8 @@ public class TranslationJob
     private readonly ITranslationServiceFactory _translationServiceFactory;
     private readonly ITranslationRequestService _translationRequestService;
     private readonly ITranslationRequestEventService _eventService;
+    private readonly IServiceChainResolver _serviceChainResolver;
+    private readonly IServiceQuotaTracker _quotaTracker;
 
     public TranslationJob(
         ILogger<TranslationJob> logger,
@@ -37,7 +41,9 @@ public class TranslationJob
         IStatisticsService statisticsService,
         ITranslationServiceFactory translationServiceFactory,
         ITranslationRequestService translationRequestService,
-        ITranslationRequestEventService eventService)
+        ITranslationRequestEventService eventService,
+        IServiceChainResolver serviceChainResolver,
+        IServiceQuotaTracker quotaTracker)
     {
         _logger = logger;
         _settings = settings;
@@ -49,6 +55,8 @@ public class TranslationJob
         _translationServiceFactory = translationServiceFactory;
         _translationRequestService = translationRequestService;
         _eventService = eventService;
+        _serviceChainResolver = serviceChainResolver;
+        _quotaTracker = quotaTracker;
     }
 
     [AutomaticRetry(Attempts = 0)]
@@ -94,7 +102,6 @@ public class TranslationJob
                 SettingKeys.Translation.UseSubtitleTagging,
                 SettingKeys.Translation.SubtitleTag
             ]);
-            var serviceType = settings[SettingKeys.Translation.ServiceType];
             var stripSubtitleFormatting = settings[SettingKeys.Translation.StripSubtitleFormatting] == "true";
             var addTranslatorInfo = settings[SettingKeys.Translation.AddTranslatorInfo] == "true";
             var validateSubtitles = settings[SettingKeys.SubtitleValidation.ValidateSubtitles] != "false";
@@ -161,47 +168,87 @@ public class TranslationJob
                 }
             }
 
-            // translate subtitles
-            var translationService = _translationServiceFactory.CreateTranslationService(serviceType);
-            var translator = new SubtitleTranslationService(translationService, _logger, _progressService);
-            var subtitles = await _subtitleService.ReadSubtitles(request.SubtitleToTranslate);
-            List<SubtitleItem> translatedSubtitles;
-            if (settings[SettingKeys.Translation.UseBatchTranslation] == "true"
-                && translationService is IBatchTranslationService _)
+            // Read service chain (fall back to legacy single service)
+            var chainJson = await _settings.GetSetting(SettingKeys.Translation.ServiceChain);
+            List<string> chain;
+            if (!string.IsNullOrEmpty(chainJson))
             {
-                var maxSize = int.TryParse(settings[SettingKeys.Translation.MaxBatchSize],
-                    out var batchSize)
-                    ? batchSize
-                    : 10000;
-
-                _logger.LogInformation(
-                    "Using batch translation with max batch size: {maxBatchSize} for subtitle: {filePath}",
-                    maxSize, translationRequest.SubtitleToTranslate);
-
-                translatedSubtitles = await translator.TranslateSubtitlesBatch(
-                    subtitles,
-                    translationRequest,
-                    stripSubtitleFormatting,
-                    maxSize,
-                    cancellationToken);
+                chain = JsonSerializer.Deserialize<List<string>>(chainJson) ?? new();
             }
             else
             {
-                if (contextPromptEnabled)
+                var legacyType = settings[SettingKeys.Translation.ServiceType] ?? "google";
+                chain = new List<string> { legacyType };
+            }
+
+            // translate subtitles with chain fallback
+            var subtitles = await _subtitleService.ReadSubtitles(request.SubtitleToTranslate);
+            var failedServices = new HashSet<string>();
+            ITranslationService? translationService = null;
+            var serviceType = "";
+            List<SubtitleItem>? translatedSubtitles = null;
+
+            while (translatedSubtitles == null)
+            {
+                var resolved = _serviceChainResolver.ResolveNext(chain, failedServices);
+                if (resolved == null)
                 {
-                    _logger.LogInformation(
-                        "Using individual translation with context (before: {contextBefore}, after: {contextAfter}) for subtitle: {filePath}",
-                        contextBefore, contextAfter, translationRequest.SubtitleToTranslate);
+                    throw new TranslationException(
+                        $"All services in the chain exhausted. Tried: {string.Join(", ", failedServices)}");
                 }
 
-                translatedSubtitles = await translator.TranslateSubtitles(
-                    subtitles,
-                    request,
-                    stripSubtitleFormatting,
-                    contextBefore,
-                    contextAfter,
-                    cancellationToken
-                );
+                (translationService, serviceType) = resolved.Value;
+
+                try
+                {
+                    var translator = new SubtitleTranslationService(translationService, _logger, _progressService);
+
+                    if (settings[SettingKeys.Translation.UseBatchTranslation] == "true"
+                        && translationService is IBatchTranslationService)
+                    {
+                        var maxSize = int.TryParse(settings[SettingKeys.Translation.MaxBatchSize],
+                            out var batchSize)
+                            ? batchSize
+                            : 10000;
+
+                        _logger.LogInformation(
+                            "Using batch translation with {ServiceType}, max batch size: {maxBatchSize}",
+                            serviceType, maxSize);
+
+                        translatedSubtitles = await translator.TranslateSubtitlesBatch(
+                            subtitles,
+                            translationRequest,
+                            stripSubtitleFormatting,
+                            maxSize,
+                            cancellationToken);
+                    }
+                    else
+                    {
+                        if (contextPromptEnabled)
+                        {
+                            _logger.LogInformation(
+                                "Using {ServiceType} with context (before: {contextBefore}, after: {contextAfter})",
+                                serviceType, contextBefore, contextAfter);
+                        }
+
+                        translatedSubtitles = await translator.TranslateSubtitles(
+                            subtitles,
+                            request,
+                            stripSubtitleFormatting,
+                            contextBefore,
+                            contextAfter,
+                            cancellationToken);
+                    }
+
+                    // Record character usage for quota tracking
+                    var totalChars = translatedSubtitles.Sum(s => (long)(s.OriginalText?.Length ?? 0));
+                    _quotaTracker.RecordUsage(serviceType, totalChars);
+                }
+                catch (Exception ex) when (ex is not TaskCanceledException and not OperationCanceledException)
+                {
+                    failedServices.Add(serviceType);
+                    _logger.LogWarning(ex, "Translation failed with {ServiceType}, trying next in chain", serviceType);
+                }
             }
 
             if (settings[SettingKeys.Translation.FixOverlappingSubtitles] == "true")
