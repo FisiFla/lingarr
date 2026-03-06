@@ -5,6 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lingarr.Server.Controllers;
 
+/// <summary>
+/// Health check controller. Uses [AllowAnonymous] intentionally — health checks
+/// must be accessible without authentication for Docker HEALTHCHECK and orchestrators.
+/// Route is /api/health (matching the HEALTHCHECK CMD in the Dockerfile).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class HealthController : ControllerBase
@@ -18,7 +23,7 @@ public class HealthController : ControllerBase
 
     /// <summary>
     /// Health check endpoint for container orchestration and monitoring.
-    /// Verifies the application can connect to the database.
+    /// Verifies the application can connect to the database within 5 seconds.
     /// </summary>
     [HttpGet]
     [AllowAnonymous]
@@ -26,7 +31,8 @@ public class HealthController : ControllerBase
     {
         try
         {
-            await _dbContext.Database.CanConnectAsync();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await _dbContext.Database.CanConnectAsync(cts.Token);
             return Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
         }
         catch

@@ -11,12 +11,15 @@ namespace Lingarr.Server.Controllers;
 public class DirectoryController : ControllerBase
 {
     private readonly IDirectoryService _directoryService;
+    private readonly ILogger<DirectoryController> _logger;
     private static readonly string[] AllowedRoots = (Environment.GetEnvironmentVariable("ALLOWED_MEDIA_PATHS") ?? "/media,/movies,/tv")
         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    public DirectoryController(IDirectoryService directoryService)
+    public DirectoryController(IDirectoryService directoryService, ILogger<DirectoryController> logger)
     {
         _directoryService = directoryService;
+        _logger = logger;
+        _logger.LogInformation("DirectoryController initialized with allowed roots: {AllowedRoots}", string.Join(", ", AllowedRoots));
     }
 
     /// <summary>
@@ -56,7 +59,7 @@ public class DirectoryController : ControllerBase
         }
         catch (UnauthorizedAccessException)
         {
-            return Forbid($"Access denied to directory: {path}");
+            return StatusCode(403, $"Access denied to directory: {path}");
         }
         catch (Exception ex)
         {

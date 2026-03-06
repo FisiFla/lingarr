@@ -21,17 +21,7 @@ export const useMovieStore = defineStore('movie', {
     }),
     getters: {
         getFilter: (state: IUseMovieStore): IFilter => state.filter,
-        get(): IPagedResult<IMovie> {
-            return {
-                ...this.movies,
-                items: this.movies.items?.map((item) => ({
-                    ...item,
-                    subtitles: item.subtitles
-                        ?.slice()
-                        .sort((a, b) => a.language.localeCompare(b.language))
-                }))
-            }
-        }
+        get: (state: IUseMovieStore): IPagedResult<IMovie> => state.movies
     },
     actions: {
         async setFilter(filterVal: IFilter) {
@@ -45,6 +35,10 @@ export const useMovieStore = defineStore('movie', {
                 this.filter.sortBy,
                 this.filter.isAscending
             )
+            // Sort subtitles alphabetically for consistent display
+            this.movies.items?.forEach((item) => {
+                item.subtitles?.sort((a, b) => a.language.localeCompare(b.language))
+            })
         },
         async exclude(type: MediaType, id: number) {
             await services.media.exclude(type, id)

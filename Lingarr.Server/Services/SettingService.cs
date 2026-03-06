@@ -182,7 +182,12 @@ public class SettingService : ISettingService
         var value = await GetSetting(key);
         if (!string.IsNullOrEmpty(value))
         {
-            return _encryptionService.Decrypt(value);
+            if (_encryptionService.TryDecrypt(value, out var decrypted))
+            {
+                return decrypted;
+            }
+            _logger.LogWarning("Failed to decrypt setting '{Key}' — value may be corrupted or from a previous installation", key);
+            return null;
         }
         return value;
     }
@@ -195,7 +200,14 @@ public class SettingService : ISettingService
         var decrypted = new Dictionary<string, string>();
         foreach (var setting in settings)
         {
-            decrypted[setting.Key] = _encryptionService.Decrypt(setting.Value);
+            if (_encryptionService.TryDecrypt(setting.Value, out var decryptedValue))
+            {
+                decrypted[setting.Key] = decryptedValue;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to decrypt setting '{Key}' — value may be corrupted or from a previous installation", setting.Key);
+            }
         }
 
         return decrypted;

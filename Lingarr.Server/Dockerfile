@@ -37,21 +37,19 @@ RUN dotnet publish "./Lingarr.Server.csproj" -c $BUILD_CONFIGURATION -o /app/pub
 # Step 5: Final image
 FROM base AS final
 
-# Run as non-root user for security
-RUN addgroup --system --gid 1000 lingarr && \
-    adduser --system --uid 1000 --ingroup lingarr lingarr
+# Install curl for health checks (not included in aspnet slim base image)
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Ensure config directory exists and is writable by the lingarr user
-RUN mkdir -p /app/config && chown -R lingarr:lingarr /app/config
+# Note: Non-root user is not used because host-mounted volumes at /app/config
+# would have host UID/GID that the container user cannot write to.
+# Consider using s6-overlay with PUID/PGID env vars for proper non-root support.
 
 VOLUME /app/config
 
-USER lingarr
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:9876/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:9876/api/health || exit 1
 
 ENTRYPOINT ["dotnet", "Lingarr.Server.dll"]

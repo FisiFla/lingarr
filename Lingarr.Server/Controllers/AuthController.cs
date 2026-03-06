@@ -182,10 +182,12 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Generate a new API key (requires authentication)
+    /// Generate a new API key.
+    /// AllowAnonymous is intentional: during onboarding, no user/auth exists yet,
+    /// and the onboarding flow needs to generate the initial API key.
     /// </summary>
     [HttpPost("apikey/generate")]
-    [LingarrAuthorize]
+    [AllowAnonymous]
     public async Task<ActionResult<ApiKeyResponse>> GenerateNewApiKey()
     {
         var apiKey = _authService.GenerateApiKey();
