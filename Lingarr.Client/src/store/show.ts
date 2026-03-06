@@ -35,14 +35,6 @@ export const useShowStore = defineStore('show', {
                 this.filter.sortBy,
                 this.filter.isAscending
             )
-            // Sort subtitles alphabetically for consistent display
-            this.shows.items?.forEach((item) => {
-                item.seasons?.forEach((season) => {
-                    season.episodes?.forEach((episode) => {
-                        episode.subtitles?.sort((a, b) => a.language.localeCompare(b.language))
-                    })
-                })
-            })
         },
         async exclude(type: MediaType, id: number) {
             await services.media.exclude(type, id)
