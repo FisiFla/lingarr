@@ -241,7 +241,7 @@ public class TranslationJob
                     }
 
                     // Record character usage for quota tracking
-                    var totalChars = translatedSubtitles.Sum(s => (long)(s.OriginalText?.Length ?? 0));
+                    var totalChars = translatedSubtitles.Sum(s => s.Lines?.Sum(l => (long)l.Length) ?? 0);
                     _quotaTracker.RecordUsage(serviceType, totalChars);
                 }
                 catch (Exception ex) when (ex is not TaskCanceledException and not OperationCanceledException)
