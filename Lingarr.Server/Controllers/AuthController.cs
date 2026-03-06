@@ -22,6 +22,7 @@ public class AuthController : ControllerBase
     private readonly ILogger<AuthController> _logger;
     private readonly LingarrDbContext _context;
     private static readonly SemaphoreSlim OnboardingMutationLock = new(1, 1);
+    private static readonly TimeSpan OnboardingMutationLockTimeout = TimeSpan.FromSeconds(30);
 
     public AuthController(IAuthService authService, ISettingService settingService, ILogger<AuthController> logger, LingarrDbContext context)
     {
@@ -373,9 +374,38 @@ public class AuthController : ControllerBase
         return !string.IsNullOrWhiteSpace(apiKey) && await _authService.ValidateApiKey(apiKey);
     }
 
-    private static async Task<T> ExecuteOnboardingMutationWithLock<T>(Func<Task<T>> action)
+    private async Task<ActionResult> ExecuteOnboardingMutationWithLock(Func<Task<ActionResult>> action)
     {
-        await OnboardingMutationLock.WaitAsync();
+        var lockAcquired =
+            await OnboardingMutationLock.WaitAsync(OnboardingMutationLockTimeout, HttpContext.RequestAborted);
+        if (!lockAcquired)
+        {
+            _logger.LogWarning("Onboarding mutation lock timeout for request path {Path}", Request.Path);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Onboarding operation is busy. Please retry." });
+        }
+
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            OnboardingMutationLock.Release();
+        }
+    }
+
+    private async Task<ActionResult<T>> ExecuteOnboardingMutationWithLock<T>(Func<Task<ActionResult<T>>> action)
+    {
+        var lockAcquired =
+            await OnboardingMutationLock.WaitAsync(OnboardingMutationLockTimeout, HttpContext.RequestAborted);
+        if (!lockAcquired)
+        {
+            _logger.LogWarning("Onboarding mutation lock timeout for request path {Path}", Request.Path);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Onboarding operation is busy. Please retry." });
+        }
+
         try
         {
             return await action();
