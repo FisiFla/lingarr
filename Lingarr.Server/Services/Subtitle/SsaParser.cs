@@ -109,6 +109,12 @@ public class SsaParser : ISubtitleParser
             throw new ArgumentException("No valid subtitles found in SSA format");
         }
 
+        // Assign sequential positions (SSA format doesn't have explicit position numbers)
+        for (var i = 0; i < items.Count; i++)
+        {
+            items[i].Position = i + 1;
+        }
+
         return items;
     }
 

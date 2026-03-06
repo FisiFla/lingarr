@@ -118,6 +118,8 @@ public class LingarrApiService : ILingarrApiService
 
     private string GenerateHmac(string payload)
     {
+        // Note: This key signs telemetry payloads to the Lingarr API. As a client-side key in open-source
+        // software, it provides request authenticity verification, not confidentiality.
         using var hmac = new HMACSHA256("tSBTCU4Qv76so0c2U8bBX0faSzc3uc6Z"u8.ToArray());
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();

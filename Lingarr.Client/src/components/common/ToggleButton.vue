@@ -48,7 +48,8 @@ const emit = defineEmits<{
 }>()
 
 const toggle = () => {
-    emit('update:modelValue', modelValue === 'true' ? 'false' : 'true')
+    const current = modelValue === true || modelValue === 'true'
+    emit('update:modelValue', current ? 'false' : 'true')
     emit('toggle:update')
 }
 </script>

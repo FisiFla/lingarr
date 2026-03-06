@@ -69,13 +69,22 @@ export function useTemplatePreview(props: TemplatePreviewProps) {
         }
     })
 
+    function escapeHtml(text: string): string {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+    }
+
     function syntaxHighlight(json: string): string {
-        return json.replace(
+        // Escape HTML entities first to prevent XSS via v-html
+        const escaped = escapeHtml(json)
+        return escaped.replace(
             /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
             (match) => {
                 let cssVar = '--syntax-number'
-                if (match.startsWith('"')) {
-                    cssVar = match.endsWith(':') ? '--syntax-key' : '--syntax-string'
+                if (match.startsWith('"') || match.startsWith('&quot;')) {
+                    cssVar = (match.endsWith(':') || match.endsWith(':')) ? '--syntax-key' : '--syntax-string'
                 } else if (/true|false|null/.test(match)) {
                     cssVar = '--syntax-keyword'
                 }

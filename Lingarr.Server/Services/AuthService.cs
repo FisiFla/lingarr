@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Lingarr.Core.Configuration;
 using Lingarr.Core.Data;
 using Lingarr.Core.Entities;
@@ -89,7 +91,9 @@ public class AuthService : IAuthService
             return false;
         }
 
-        return apiKey == storedApiKey;
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(apiKey),
+            Encoding.UTF8.GetBytes(storedApiKey));
     }
 
     private static string HashPassword(string password)

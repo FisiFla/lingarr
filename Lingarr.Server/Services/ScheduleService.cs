@@ -123,14 +123,15 @@ public class ScheduleService : IScheduleService
     {
         var monitor = JobStorage.Current.GetMonitoringApi();
 
-        // Check each possible state
-        if (monitor.SucceededJobs(0, 1).Any(j => j.Key == jobId))
+        // Scan a reasonable window of recent jobs to find the matching job ID
+        const int scanSize = 100;
+        if (monitor.SucceededJobs(0, scanSize).Any(j => j.Key == jobId))
             return JobStatus.Succeeded.GetDisplayName();
-        if (monitor.FailedJobs(0, 1).Any(j => j.Key == jobId))
+        if (monitor.FailedJobs(0, scanSize).Any(j => j.Key == jobId))
             return JobStatus.Failed.GetDisplayName();
-        if (monitor.ScheduledJobs(0, 1).Any(j => j.Key == jobId))
+        if (monitor.ScheduledJobs(0, scanSize).Any(j => j.Key == jobId))
             return JobStatus.Scheduled.GetDisplayName();
-        if (monitor.EnqueuedJobs("default", 0, 1).Any(j => j.Key == jobId))
+        if (monitor.EnqueuedJobs("default", 0, scanSize).Any(j => j.Key == jobId))
             return JobStatus.Enqueued.GetDisplayName();
 
         return JobStatus.Planned.GetDisplayName();

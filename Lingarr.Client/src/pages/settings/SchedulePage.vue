@@ -77,5 +77,6 @@ onMounted(async () => {
 
 onUnmounted(async () => {
     hubConnection.value?.off('JobStateUpdated', onJobStateUpdated)
+    await hubConnection.value?.leaveGroup({ group: 'JobProgress' })
 })
 </script>

@@ -214,7 +214,7 @@ public class TranslationJob
                 _subtitleService.AddTranslatorInfo(serviceType, translatedSubtitles, translationService);
             }
 
-            if (stripSubtitleFormatting)
+            if (stripSubtitleFormatting && translatedSubtitles.Count > 0)
             {
                 var format = translatedSubtitles[0].SsaFormat;
                 if (format != null)

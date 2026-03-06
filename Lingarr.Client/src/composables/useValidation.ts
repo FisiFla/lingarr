@@ -45,7 +45,7 @@ export default function useValidation(props: ValidationProps) {
                 error.value = isValid.value
                     ? ''
                     : props.errorMessage ||
-                      'Invalid cron expression, use <a href="https://crontab.guru/" target="_blank">https://crontab.guru<a> or other tools to generate a valid expression'
+                      'Invalid cron expression, use <a href="https://crontab.guru/" target="_blank">https://crontab.guru</a> or other tools to generate a valid expression'
                 break
             default:
                 isValid.value = true

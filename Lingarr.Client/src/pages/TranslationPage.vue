@@ -207,6 +207,7 @@ onMounted(async () => {
 
 onUnmounted(async () => {
     hubConnection.value?.off('RequestProgress', translationRequestStore.updateProgress)
+    await hubConnection.value?.leaveGroup({ group: 'TranslationRequests' })
 })
 
 const isSelectMode = ref(false)

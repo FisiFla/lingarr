@@ -114,7 +114,7 @@ public class SubtitleService : ISubtitleService
             _ => throw new NotSupportedException($"Subtitle format {extension} is not supported")
         };
 
-        await using var fileStream = File.OpenWrite(filePath);
+        await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
         await writer.WriteStreamAsync(fileStream, subtitles, stripSubtitleFormatting);
     }
 
@@ -339,7 +339,7 @@ public class SubtitleService : ISubtitleService
         try
         {
             using var stream = File.OpenRead(filePath);
-            return ValidateSubtitleStream(stream, Encoding.UTF8, options);
+            return ValidateSubtitleStream(stream, Encoding.UTF8, options, filePath);
         }
         catch (Exception ex)
         {
@@ -351,7 +351,8 @@ public class SubtitleService : ISubtitleService
     private bool ValidateSubtitleStream(
         Stream subtitleStream,
         Encoding encoding,
-        SubtitleValidationOptions options)
+        SubtitleValidationOptions options,
+        string filePath)
     {
         try
         {
@@ -370,7 +371,12 @@ public class SubtitleService : ISubtitleService
             // Reset stream position to the beginning before parsing
             subtitleStream.Seek(0, SeekOrigin.Begin);
 
-            var parser = new SrtParser();
+            var extension = Path.GetExtension(filePath).ToLower();
+            ISubtitleParser parser = extension switch
+            {
+                ".ssa" or ".ass" => new SsaParser(),
+                _ => new SrtParser()
+            };
             var subtitles = parser.ParseStream(subtitleStream, encoding);
 
             if (subtitles.Count < 2)

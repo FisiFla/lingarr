@@ -454,14 +454,14 @@ public class TranslationRequestService : ITranslationRequestService
                 ? query.OrderBy(m => m.Title) 
                 : query.OrderByDescending(m => m.Title),
             "CreatedAt" => ascending
-                ? query.OrderByDescending(tr => tr.CreatedAt)
-                : query.OrderBy(tr => tr.CreatedAt),
+                ? query.OrderBy(tr => tr.CreatedAt)
+                : query.OrderByDescending(tr => tr.CreatedAt),
             "CompletedAt" => ascending
-                ? query.OrderByDescending(tr => tr.CompletedAt)
-                : query.OrderBy(tr => tr.CompletedAt),
+                ? query.OrderBy(tr => tr.CompletedAt)
+                : query.OrderByDescending(tr => tr.CompletedAt),
             _ => ascending
-                ? query.OrderByDescending(tr => tr.CreatedAt)
-                : query.OrderBy(tr => tr.CreatedAt)
+                ? query.OrderBy(tr => tr.CreatedAt)
+                : query.OrderByDescending(tr => tr.CreatedAt)
         };
         
         var totalCount = await query.CountAsync();

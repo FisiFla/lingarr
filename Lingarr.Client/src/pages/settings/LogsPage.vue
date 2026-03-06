@@ -111,6 +111,7 @@ const filterOptions = ref<IFilterOptions>({
     logLevel: 'all'
 })
 let eventSource: EventSource | null = null
+let isMounted = false
 
 const filteredLogs = computed(() => {
     return logs.value.filter((log) => {
@@ -124,16 +125,25 @@ const filteredLogs = computed(() => {
     })
 })
 
+const escapeHtml = (text: string): string => {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
+}
+
 const formatLogMessage = (message: string): string => {
+    // Escape HTML first to prevent XSS from log message content
+    let formattedMessage = escapeHtml(message)
+
     // Replace color tags
-    let formattedMessage = message
+    formattedMessage = formattedMessage
         .replace(/\|Green\|([^|]+)\|\/Green\|/g, '<span class="text-green-500">$1</span>')
         .replace(/\|Red\|([^|]+)\|\/Red\|/g, '<span class="text-red-500">$1</span>')
         .replace(/\|Orange\|([^|]+)\|\/Orange\|/g, '<span class="text-orange-500">$1</span>')
 
     // Highlight environment variables
     formattedMessage = formattedMessage.replace(
-        /'([A-Z_]+)'/g,
+        /&#39;([A-Z_]+)&#39;/g,
         '<span class="text-accent">\'$1\'</span>'
     )
 
@@ -205,7 +215,7 @@ watch(
     { deep: true }
 )
 
-onMounted(() => {
+const setupEventSource = () => {
     eventSource = services.logs.getStream()
 
     eventSource.onmessage = (event) => {
@@ -215,7 +225,6 @@ onMounted(() => {
             scrollToBottom()
         } catch (error) {
             console.error('Error processing log entry:', error)
-            console.error('Problematic data:', event.data)
 
             const fallbackEntry: ILogEntry = {
                 logLevel: 'Error',
@@ -231,8 +240,9 @@ onMounted(() => {
         }
     }
 
-    eventSource.onerror = (error) => {
-        console.error('EventSource error:', error)
+    eventSource.onerror = () => {
+        if (!isMounted) return
+
         logs.value.push({
             logLevel: 'error',
             message: `Log stream connection error. Attempting to reconnect in 5 seconds...`,
@@ -241,17 +251,27 @@ onMounted(() => {
             formattedSource: 'System',
             category: 'System'
         })
-        // reconnect
+
         if (eventSource) {
             eventSource.close()
-            setTimeout(() => {
-                eventSource = services.logs.getStream()
-            }, 5000)
+            eventSource = null
         }
+
+        setTimeout(() => {
+            if (isMounted) {
+                setupEventSource()
+            }
+        }, 5000)
     }
+}
+
+onMounted(() => {
+    isMounted = true
+    setupEventSource()
 })
 
 onUnmounted(() => {
+    isMounted = false
     if (eventSource) {
         eventSource.close()
         eventSource = null

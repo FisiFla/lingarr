@@ -231,5 +231,6 @@ onMounted(async () => {
 onUnmounted(async () => {
     hubConnection.value?.off('RequestProgress', handleProgress)
     hubConnection.value?.off('LineTranslated', handleLineTranslated)
+    await hubConnection.value?.leaveGroup({ group: 'TranslationRequests' })
 })
 </script>

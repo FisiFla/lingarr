@@ -40,8 +40,12 @@ public class ImageController : ControllerBase
         }
 
         var strippedPath = StripBeforeMediaCover(path);
-        var url = $"{settings.Url}/api/v3/{strippedPath}?apikey={settings.ApiKey}";
+        if (strippedPath == null)
+        {
+            return BadRequest("Invalid image path. Path must contain 'MediaCover' and no '..' segments.");
+        }
 
+        var url = $"{settings.Url}/api/v3/{strippedPath}?apikey={settings.ApiKey}";
         return await _imageService.GetApiResponse(url);
     }
     
@@ -65,8 +69,12 @@ public class ImageController : ControllerBase
         }
 
         var strippedPath = StripBeforeMediaCover(path);
-        var url = $"{settings.Url}/api/v3/{strippedPath}?apikey={settings.ApiKey}";
+        if (strippedPath == null)
+        {
+            return BadRequest("Invalid image path. Path must contain 'MediaCover' and no '..' segments.");
+        }
 
+        var url = $"{settings.Url}/api/v3/{strippedPath}?apikey={settings.ApiKey}";
         return await _imageService.GetApiResponse(url);
     }
 
@@ -75,16 +83,29 @@ public class ImageController : ControllerBase
     /// </summary>
     /// <param name="path">The original path</param>
     /// <returns>The path starting from MediaCover</returns>
-    private static string StripBeforeMediaCover(string path)
+    private static string? StripBeforeMediaCover(string path)
     {
         if (string.IsNullOrEmpty(path))
         {
-            return path;
+            return null;
         }
 
         const string mediaCoverSegment = "MediaCover";
         var index = path.IndexOf(mediaCoverSegment, StringComparison.OrdinalIgnoreCase);
-        
-        return index >= 0 ? path.Substring(index) : path;
+
+        if (index < 0)
+        {
+            return null;
+        }
+
+        var stripped = path.Substring(index);
+
+        // Prevent path traversal via ".." segments
+        if (stripped.Contains(".."))
+        {
+            return null;
+        }
+
+        return stripped;
     }
 }

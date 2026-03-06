@@ -49,6 +49,8 @@ COPY --from=publish /app/publish .
 
 VOLUME /app/config
 
+EXPOSE 9876
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:9876/api/health || exit 1
 

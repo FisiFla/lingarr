@@ -190,7 +190,7 @@
                     </div>
 
                     <div
-                        if="authStore.users.length === 0 && !authStore.createUser"
+                        v-if="authStore.users.length === 0 && !authStore.isCreating"
                         class="py-8 text-center text-gray-400">
                         No users found
                     </div>

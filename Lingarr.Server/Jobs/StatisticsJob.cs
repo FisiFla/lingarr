@@ -37,6 +37,7 @@ public class StatisticsJob
         var episodeSubtitles = 0;
         var byLanguage = new Dictionary<string, int>();
         var processedPaths = new HashSet<string>();
+        var hasErrors = false;
         await _scheduleService.UpdateJobState(jobName, JobStatus.Processing.GetDisplayName());
         
         var movies = await _dbContext.Movies.ToListAsync();
@@ -63,8 +64,8 @@ public class StatisticsJob
             }
             catch (DirectoryNotFoundException)
             {
-                await _scheduleService.UpdateJobState(jobName, JobStatus.Failed.GetDisplayName());
-                _logger.LogWarning("Directory not found for movie: {MovieTitle} at path: {Path}", 
+                hasErrors = true;
+                _logger.LogWarning("Directory not found for movie: {MovieTitle} at path: {Path}",
                     movie.Title, movie.Path);
             }
         }
@@ -78,7 +79,7 @@ public class StatisticsJob
             foreach (var season in show.Seasons)
             {
                 if (string.IsNullOrEmpty(season.Path)) continue;
-                
+
                 if (processedPaths.Any(p => season.Path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
@@ -89,7 +90,7 @@ public class StatisticsJob
                     var subtitles = await _subtitleService.GetAllSubtitles(season.Path);
                     episodeSubtitles += subtitles.Count;
                     processedPaths.Add(season.Path);
-                    
+
                     // Group by language for language counts
                     foreach (var subtitle in subtitles)
                     {
@@ -102,7 +103,7 @@ public class StatisticsJob
                 }
                 catch (DirectoryNotFoundException)
                 {
-                    await _scheduleService.UpdateJobState(jobName, JobStatus.Failed.GetDisplayName());
+                    hasErrors = true;
                     _logger.LogWarning("Directory not found for season at path: {Path}", season.Path);
                 }
             }
@@ -120,6 +121,7 @@ public class StatisticsJob
         stats.TotalSubtitles = movieSubtitles + episodeSubtitles;
         stats.SubtitlesByLanguage = byLanguage;
         await _dbContext.SaveChangesAsync();
-        await _scheduleService.UpdateJobState(jobName, JobStatus.Succeeded.GetDisplayName());
+        await _scheduleService.UpdateJobState(jobName,
+            hasErrors ? JobStatus.Failed.GetDisplayName() : JobStatus.Succeeded.GetDisplayName());
     }
 }

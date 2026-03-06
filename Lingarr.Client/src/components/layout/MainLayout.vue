@@ -105,5 +105,7 @@ onMounted(async () => {
 onUnmounted(async () => {
     settingHubConnection.value?.off('SettingUpdate', onSettingUpdate)
     requestHubConnection.value?.off('RequestActive', onRequestActive)
+    await settingHubConnection.value?.leaveGroup({ group: 'SettingUpdates' })
+    await requestHubConnection.value?.leaveGroup({ group: 'TranslationRequests' })
 })
 </script>

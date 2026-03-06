@@ -30,10 +30,10 @@ public static class ApplicationBuilderExtensions
             });
         }
 
+        app.UseStaticFiles();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
-        app.UseStaticFiles();
         app.ConfigureSpa();
     }
 

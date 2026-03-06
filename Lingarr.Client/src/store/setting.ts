@@ -11,10 +11,16 @@ export const useSettingStore = defineStore('setting', {
     }),
     getters: {
         getSettings: (state: IUseSettingStore): ISettings => {
+            const parseSafe = (value: unknown) => {
+                if (typeof value === 'string') {
+                    return JSON.parse(value)
+                }
+                return value
+            }
             return {
                 ...state.settings,
-                source_languages: JSON.parse(state.settings.source_languages as string),
-                target_languages: JSON.parse(state.settings.target_languages as string)
+                source_languages: parseSafe(state.settings.source_languages),
+                target_languages: parseSafe(state.settings.target_languages)
             }
         },
         getSetting: (state: IUseSettingStore) => (key: keyof ISettings) => state.settings[key],
