@@ -15,6 +15,7 @@ public static class SettingKeys
     public static class Translation
     {
         public const string ServiceType = "service_type";
+        public const string ServiceChain = "service_chain";
 
         public static class OpenAi
         {
