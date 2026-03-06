@@ -55,8 +55,14 @@ export const useAuthStore = defineStore('auth', {
     actions: {
         async loadUsers(): Promise<void> {
             this.loading = true
-            this.users = await services.auth.getUsers()
-            this.loading = false
+            try {
+                this.users = await services.auth.getUsers()
+            } catch (err: unknown) {
+                console.error('Error loading users:', err)
+                this.error = 'Failed to load users'
+            } finally {
+                this.loading = false
+            }
         },
 
         createOrEditUser(user?: IUser): void {
@@ -112,10 +118,11 @@ export const useAuthStore = defineStore('auth', {
 
                 this.cancelEdit()
                 await this.loadUsers()
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Error saving user:', err)
+                const axiosErr = err as { data?: { message?: string } }
                 this.error =
-                    err?.data?.message ||
+                    axiosErr?.data?.message ||
                     (this.isCreating ? 'Failed to create user' : 'Failed to update user')
             } finally {
                 this.loading = false
@@ -136,9 +143,10 @@ export const useAuthStore = defineStore('auth', {
                 }, 3000)
 
                 await this.loadUsers()
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Error deleting user:', err)
-                this.error = err?.data?.message || 'Failed to delete user'
+                const axiosErr = err as { data?: { message?: string } }
+                this.error = axiosErr?.data?.message || 'Failed to delete user'
             } finally {
                 this.deletingUserId = null
             }

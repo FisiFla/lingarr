@@ -11,15 +11,8 @@ import './utils'
 const pinia = createPinia()
 const app = createApp(App)
 
-new Promise((resolve) => resolve(true))
-    .then(() => {
-        app.directive('highlight', highlight)
-        app.directive('show-title', showTitle)
-    })
-    .then(() => {
-        app.use(pinia)
-        app.use(router)
-    })
-    .finally(() => {
-        app.mount('#app')
-    })
+app.directive('highlight', highlight)
+app.directive('show-title', showTitle)
+app.use(pinia)
+app.use(router)
+app.mount('#app')

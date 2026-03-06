@@ -201,9 +201,10 @@ const completeSetup = async () => {
         onboardingStore.resetOnboarding()
         await settingStore.applySettingsOnLoad()
         router.push('/')
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Onboarding error:', err)
-        error.value = err?.data?.message || 'An error occurred during setup. Please try again.'
+        const axiosErr = err as { data?: { message?: string } }
+        error.value = axiosErr?.data?.message || 'An error occurred during setup. Please try again.'
     } finally {
         loading.value = false
     }

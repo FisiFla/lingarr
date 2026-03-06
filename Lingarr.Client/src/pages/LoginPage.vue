@@ -80,9 +80,10 @@ const handleLogin = async () => {
         })
 
         router.push('/')
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Login error:', err)
-        error.value = err?.data?.message || 'Invalid username or password'
+        const axiosErr = err as { data?: { message?: string } }
+        error.value = axiosErr?.data?.message || 'Invalid username or password'
     } finally {
         loading.value = false
     }

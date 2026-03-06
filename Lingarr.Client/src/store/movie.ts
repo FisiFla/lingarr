@@ -22,15 +22,15 @@ export const useMovieStore = defineStore('movie', {
     getters: {
         getFilter: (state: IUseMovieStore): IFilter => state.filter,
         get(): IPagedResult<IMovie> {
-            this.movies.items = this.movies.items?.map((item) => {
-                return {
+            return {
+                ...this.movies,
+                items: this.movies.items?.map((item) => ({
                     ...item,
                     subtitles: item.subtitles
                         ?.slice()
                         .sort((a, b) => a.language.localeCompare(b.language))
-                }
-            })
-            return this.movies
+                }))
+            }
         }
     },
     actions: {

@@ -46,7 +46,7 @@ const authEnabled = computed({
                         'There are currently no users. Create a user before enabling authentication.'
                     return
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Error checking for users:', err)
                 error.value = 'Failed to verify users. Please try again.'
                 return
