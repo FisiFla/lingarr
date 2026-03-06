@@ -59,7 +59,7 @@
                     </BadgeComponent>
                     <BadgeComponent v-else>
                         {{
-                            'Version: {version}'.format({
+                            '{version} (fisifla fork)'.format({
                                 version: instanceStore.getVersion.currentVersion
                             })
                         }}
