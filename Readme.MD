@@ -1,4 +1,7 @@
-﻿# Lingarr: Subtitle Translation Made Easy
+﻿# Lingarr: Subtitle Translation Made Easy (Fork)
+
+> **This is a fork of [lingarr-translate/lingarr](https://github.com/lingarr-translate/lingarr).**
+> The codebase was reviewed with the help of AI (Claude) and several improvements were made across security, correctness, performance, and Docker hardening. See the [Changes from Upstream](#changes-from-upstream) section below for details. These changes are intended to be contributed back to the original project.
 
 [![Version](https://img.shields.io/github/v/release/lingarr-translate/lingarr)](https://github.com/lingarr-translate/lingarr/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/lingarr/lingarr.svg)](https://hub.docker.com/r/lingarr/lingarr)
@@ -222,6 +225,42 @@ user: "1000:1000"  # UID:GID
 ## API Integration
 Lingarr provides a RESTful API that allows you to integrate subtitle translation capabilities into your applications. You can find the complete API documentation, including a Swagger definition of all available endpoints at the 
 [Lingarr API Documentation](https://lingarr.com/docs/api/)
+
+## Changes from Upstream
+
+This fork contains improvements identified through an AI-assisted code review (using Claude). All changes are intended to be proposed back to the original project. **No features were removed or altered** — these are purely hardening, correctness, and quality-of-life improvements.
+
+### Security
+- **API key regeneration now requires authentication** — the endpoint was previously `AllowAnonymous`, allowing any unauthenticated caller to rotate the API key
+- **Minimum password length increased from 4 to 8 characters** (aligned with NIST SP 800-63B)
+- **Added `UseAuthorization()` to the middleware pipeline** — it was missing, meaning standard `[Authorize]` attributes were silently not enforced
+- **Directory browsing restricted to allowed media paths** — previously any filesystem path could be browsed via the API. Now controlled by `ALLOWED_MEDIA_PATHS` env var (defaults to `/media,/movies,/tv`)
+- **Removed hardcoded fallback database password** (`Secret1234`) — the app now requires `DB_PASSWORD` to be set explicitly when using MySQL/PostgreSQL
+- **Narrowed bare `catch` to `CryptographicException`** in API key migration to avoid swallowing unrelated errors
+
+### Correctness & Stability
+- **Fixed `async void` event handlers** in `SettingChangedListener` and `ScheduleInitializationService` — unhandled exceptions in `async void` crash the process; now properly wrapped with try/catch
+- **Fixed `MovieStore` Pinia getter mutating state** — the getter was reassigning `this.movies.items` on every access, causing infinite reactivity loops. Now returns a new object instead
+- **Replaced `Console.WriteLine` with structured `ILogger` calls** in `SubtitleService` (7 locations) — these were bypassing the logging pipeline
+- **Fixed `HttpClient` leak in `OpenAiService.GetModels()`** — a new `HttpClient` was created per call without being disposed
+- **Replaced reflection-based `_model` field access with public `ModelName` property** in `SubtitleService.AddTranslatorInfo`
+- **`EncryptionService.Decrypt` no longer silently returns ciphertext on failure** — added explicit `TryDecrypt` method for the migration scenario
+- **Added missing error handling to `authStore.loadUsers()`** — previously a network error would leave the loading spinner stuck forever
+- **Replaced `err: any` with `err: unknown`** + proper type narrowing in 5 locations across the frontend
+
+### Performance
+- **`CleanupJob` now uses `ExecuteDeleteAsync()`** instead of loading all expired rows into memory and removing them one by one — generates a single `DELETE` SQL statement
+
+### Docker & DevOps
+- **Added `/api/health` endpoint** with database connectivity check for container orchestration
+- **Container now runs as non-root user** (UID 1000) by default via `USER` instruction in the Dockerfile
+- **Added `HEALTHCHECK` instruction** to the Dockerfile
+- **Fixed Client Dockerfile CMD syntax** — `"run dev"` was a single argument instead of `"run", "dev"`
+
+### Simplified
+- **Removed unnecessary `Promise.resolve()` chain** in `main.ts` — was wrapping purely synchronous operations
+
+---
 
 ### 🤝 Contributing:
 We welcome contributions to Lingarr! Whether it's bug reports,
