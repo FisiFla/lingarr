@@ -404,6 +404,24 @@ public class TranslationRequestService : ITranslationRequestService
     }
 
     /// <inheritdoc />
+    public async Task<int> RemoveAllFailed()
+    {
+        var failedRequests = await _dbContext.TranslationRequests
+            .Where(tr => tr.Status == TranslationStatus.Failed)
+            .ToListAsync();
+
+        if (failedRequests.Count == 0)
+        {
+            return 0;
+        }
+
+        _dbContext.TranslationRequests.RemoveRange(failedRequests);
+        await _dbContext.SaveChangesAsync();
+
+        return failedRequests.Count;
+    }
+
+    /// <inheritdoc />
     public async Task<int> RetryAllFailed()
     {
         var failedRequests = await _dbContext.TranslationRequests

@@ -108,6 +108,7 @@ export interface ITranslationRequestService {
     remove<T>(translationRequest: ITranslationRequest): Promise<T>
     retry<T>(translationRequest: ITranslationRequest): Promise<T>
     removeAllCompleted<T>(): Promise<T>
+    removeAllFailed<T>(): Promise<T>
     retryAllFailed<T>(): Promise<T>
 }
 

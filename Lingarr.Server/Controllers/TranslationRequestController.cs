@@ -133,6 +133,18 @@ public class TranslationRequestController : ControllerBase
     }
 
     /// <summary>
+    /// Removes all failed translation requests (logs only, not subtitle files)
+    /// </summary>
+    /// <response code="200">Returns the count of removed requests</response>
+    /// <returns>ActionResult containing the count of removed translation requests</returns>
+    [HttpPost("remove-failed")]
+    public async Task<ActionResult<int>> RemoveAllFailed()
+    {
+        var count = await _translationRequestService.RemoveAllFailed();
+        return Ok(count);
+    }
+
+    /// <summary>
     /// Retries all failed translation requests by creating new jobs
     /// </summary>
     /// <response code="200">Returns the count of retried requests</response>

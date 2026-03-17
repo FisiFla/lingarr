@@ -94,6 +94,17 @@ const service = (
                 })
         })
     },
+    removeAllFailed<T>(): Promise<T> {
+        return new Promise((resolve, reject) => {
+            http.post(`${resource}/remove-failed`)
+                .then((response: AxiosResponse<T>) => {
+                    resolve(response.data)
+                })
+                .catch((error: AxiosError) => {
+                    reject(error.response)
+                })
+        })
+    },
     retryAllFailed<T>(): Promise<T> {
         return new Promise((resolve, reject) => {
             http.post(`${resource}/retry-failed`)

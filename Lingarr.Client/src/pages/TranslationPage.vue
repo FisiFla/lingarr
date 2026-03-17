@@ -26,6 +26,11 @@
                     @click="handleRetryAllFailed">
                     Retry Failed
                 </button>
+                <button
+                    class="hover:text-primary-content/50 cursor-pointer rounded-md border border-accent px-2 py-1 text-primary-content transition-colors"
+                    @click="handleRemoveAllFailed">
+                    Remove Failed
+                </button>
                 <SortControls
                     v-model="filter"
                     :options="[
@@ -243,5 +248,9 @@ const handleRemoveAllCompleted = async () => {
 
 const handleRetryAllFailed = async () => {
     await translationRequestStore.retryAllFailed()
+}
+
+const handleRemoveAllFailed = async () => {
+    await translationRequestStore.removeAllFailed()
 }
 </script>

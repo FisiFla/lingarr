@@ -80,6 +80,11 @@ export const useTranslationRequestStore = defineStore('translateRequest', {
             await this.fetch()
             return count
         },
+        async removeAllFailed() {
+            const count = await services.translationRequest.removeAllFailed<number>()
+            await this.fetch()
+            return count
+        },
         async retryAllFailed() {
             const count = await services.translationRequest.retryAllFailed<number>()
             await this.fetch()

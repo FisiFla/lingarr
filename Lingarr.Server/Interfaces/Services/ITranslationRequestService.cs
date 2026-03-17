@@ -110,6 +110,12 @@ public interface ITranslationRequestService
     Task<int> RemoveAllCompleted();
 
     /// <summary>
+    /// Removes all translation requests with Failed status.
+    /// </summary>
+    /// <returns>The number of removed translation requests</returns>
+    Task<int> RemoveAllFailed();
+
+    /// <summary>
     /// Retries all translation requests with Failed status by creating new requests.
     /// </summary>
     /// <returns>The number of retried translation requests</returns>
