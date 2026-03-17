@@ -16,6 +16,16 @@
                     @click="toggleSelectMode">
                     {{ isSelectMode ? 'Cancel' : 'Select' }}
                 </button>
+                <button
+                    class="hover:text-primary-content/50 cursor-pointer rounded-md border border-accent px-2 py-1 text-primary-content transition-colors"
+                    @click="handleRemoveAllCompleted">
+                    Remove Completed
+                </button>
+                <button
+                    class="hover:text-primary-content/50 cursor-pointer rounded-md border border-accent px-2 py-1 text-primary-content transition-colors"
+                    @click="handleRetryAllFailed">
+                    Retry Failed
+                </button>
                 <SortControls
                     v-model="filter"
                     :options="[
@@ -225,5 +235,13 @@ const handleDelete = async () => {
     }
     translationRequestStore.clearSelection()
     translationRequestStore.fetch()
+}
+
+const handleRemoveAllCompleted = async () => {
+    await translationRequestStore.removeAllCompleted()
+}
+
+const handleRetryAllFailed = async () => {
+    await translationRequestStore.retryAllFailed()
 }
 </script>

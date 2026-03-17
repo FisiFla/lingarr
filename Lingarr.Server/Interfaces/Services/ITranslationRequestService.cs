@@ -104,7 +104,19 @@ public interface ITranslationRequestService
     );
 
     /// <summary>
-    /// Clears the MediaHash property for the associated media entity (Movie or Episode) 
+    /// Removes all translation requests with Completed status.
+    /// </summary>
+    /// <returns>The number of removed translation requests</returns>
+    Task<int> RemoveAllCompleted();
+
+    /// <summary>
+    /// Retries all translation requests with Failed status by creating new requests.
+    /// </summary>
+    /// <returns>The number of retried translation requests</returns>
+    Task<int> RetryAllFailed();
+
+    /// <summary>
+    /// Clears the MediaHash property for the associated media entity (Movie or Episode)
     /// when a translation job fails or is cancelled.
     /// </summary>
     /// <param name="translationRequest">The translation request containing media information</param>

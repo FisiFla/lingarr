@@ -384,6 +384,44 @@ public class TranslationRequestService : ITranslationRequestService
         var newTranslationRequestId = await EnqueueRequest(translationRequest);
         return $"Translation request with id {retryRequest.Id} has been restarted, new job id {newTranslationRequestId}";
     }
+
+    /// <inheritdoc />
+    public async Task<int> RemoveAllCompleted()
+    {
+        var completedRequests = await _dbContext.TranslationRequests
+            .Where(tr => tr.Status == TranslationStatus.Completed)
+            .ToListAsync();
+
+        if (completedRequests.Count == 0)
+        {
+            return 0;
+        }
+
+        _dbContext.TranslationRequests.RemoveRange(completedRequests);
+        await _dbContext.SaveChangesAsync();
+
+        return completedRequests.Count;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> RetryAllFailed()
+    {
+        var failedRequests = await _dbContext.TranslationRequests
+            .Where(tr => tr.Status == TranslationStatus.Failed)
+            .ToListAsync();
+
+        if (failedRequests.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var request in failedRequests)
+        {
+            await EnqueueRequest(request);
+        }
+
+        return failedRequests.Count;
+    }
     
     /// <inheritdoc />
     public async Task<TranslationRequest> UpdateTranslationRequest(TranslationRequest translationRequest,

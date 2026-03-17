@@ -75,6 +75,16 @@ export const useTranslationRequestStore = defineStore('translateRequest', {
             await services.translationRequest.retry<string>(translationRequest)
             await this.fetch()
         },
+        async removeAllCompleted() {
+            const count = await services.translationRequest.removeAllCompleted<number>()
+            await this.fetch()
+            return count
+        },
+        async retryAllFailed() {
+            const count = await services.translationRequest.retryAllFailed<number>()
+            await this.fetch()
+            return count
+        },
         async updateProgress(requestProgress: IRequestProgress) {
             const completionStatuses: TranslationStatus[] = [
                 TRANSLATION_STATUS.CANCELLED,

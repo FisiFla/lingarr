@@ -121,6 +121,30 @@ public class TranslationRequestController : ControllerBase
     }
 
     /// <summary>
+    /// Removes all completed translation requests (logs only, not subtitle files)
+    /// </summary>
+    /// <response code="200">Returns the count of removed requests</response>
+    /// <returns>ActionResult containing the count of removed translation requests</returns>
+    [HttpPost("remove-completed")]
+    public async Task<ActionResult<int>> RemoveAllCompleted()
+    {
+        var count = await _translationRequestService.RemoveAllCompleted();
+        return Ok(count);
+    }
+
+    /// <summary>
+    /// Retries all failed translation requests by creating new jobs
+    /// </summary>
+    /// <response code="200">Returns the count of retried requests</response>
+    /// <returns>ActionResult containing the count of retried translation requests</returns>
+    [HttpPost("retry-failed")]
+    public async Task<ActionResult<int>> RetryAllFailed()
+    {
+        var count = await _translationRequestService.RetryAllFailed();
+        return Ok(count);
+    }
+
+    /// <summary>
     /// Retries an existing translation request
     /// Does not delete the current one, just reques
     /// The request with the same information
