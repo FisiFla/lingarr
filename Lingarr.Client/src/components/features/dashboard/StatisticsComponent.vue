@@ -25,12 +25,12 @@
                         <StatCard
                             title="Movies"
                             :total="statistics.totalMovies"
-                            :translated="getTranslationCount(MEDIA_TYPE.MOVIE)" />
+                            :translated="statistics.uniqueMoviesTranslated" />
 
                         <StatCard
                             title="TV Shows"
                             :total="statistics.totalEpisodes"
-                            :translated="getTranslationCount(MEDIA_TYPE.EPISODE)" />
+                            :translated="statistics.uniqueEpisodesTranslated" />
                     </div>
                 </template>
             </template>
@@ -152,7 +152,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { DailyStatistic, MEDIA_TYPE, Statistics } from '@/ts'
+import { DailyStatistic, Statistics } from '@/ts'
 import services from '@/services'
 import { serviceChainService } from '@/services/serviceChainService'
 import CardComponent from '@/components/common/CardComponent.vue'
@@ -191,10 +191,6 @@ const formatChars = (chars: number): string => {
     if (chars >= 1_000_000) return (chars / 1_000_000).toFixed(1) + 'M'
     if (chars >= 1_000) return (chars / 1_000).toFixed(0) + 'K'
     return chars.toString()
-}
-
-const getTranslationCount = (type: string): number => {
-    return statistics.value?.translationsByMediaType?.[type] || 0
 }
 
 const fetchStatistics = async () => {

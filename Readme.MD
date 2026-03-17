@@ -138,6 +138,7 @@ RESTful API documentation available at [lingarr.com/docs/api/](https://lingarr.c
 - **Multi-service translation chain** — configure multiple translation services in priority order with drag-to-reorder; jobs automatically fall through the chain on errors or quota exhaustion
 - **Per-service monthly character quotas** — set optional character limits per service with usage tracking and progress bars
 - **Dashboard quota widget** — view current month's usage per service at a glance
+- **Bulk translation management** — "Remove Completed" clears all finished translation logs; "Retry Failed" re-enqueues all failed translations in one click
 - Improved webhook setup instructions with authentication guidance
 - Bumped default concurrent jobs support (`MAX_CONCURRENT_JOBS`)
 

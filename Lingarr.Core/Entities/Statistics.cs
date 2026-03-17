@@ -44,4 +44,18 @@ public class Statistics : BaseEntity
         get => JsonSerializer.Deserialize<Dictionary<string, int>>(TranslationsByModelJson) ?? new();
         set => TranslationsByModelJson = JsonSerializer.Serialize(value);
     }
+
+    /// <summary>
+    /// Number of unique movies with at least one completed translation.
+    /// Computed at query time, not persisted.
+    /// </summary>
+    [NotMapped]
+    public int UniqueMoviesTranslated { get; set; }
+
+    /// <summary>
+    /// Number of unique episodes with at least one completed translation.
+    /// Computed at query time, not persisted.
+    /// </summary>
+    [NotMapped]
+    public int UniqueEpisodesTranslated { get; set; }
 }

@@ -8,6 +8,8 @@ export interface Statistics {
     translationsByMediaType: Record<string, number>
     translationsByService: Record<string, number>
     subtitlesByLanguage: Record<string, number>
+    uniqueMoviesTranslated: number
+    uniqueEpisodesTranslated: number
 }
 
 export interface DailyStatistic {

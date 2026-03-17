@@ -1,5 +1,6 @@
 ﻿using Lingarr.Core.Data;
 using Lingarr.Core.Entities;
+using Lingarr.Core.Enum;
 using Lingarr.Server.Interfaces.Services;
 using Lingarr.Server.Models.Batch.Response;
 using Lingarr.Server.Models.FileSystem;
@@ -22,7 +23,25 @@ public class StatisticsService : IStatisticsService
 
     public async Task<Statistics> GetStatistics()
     {
-        return await GetOrCreateStatistics();
+        var stats = await GetOrCreateStatistics();
+
+        stats.UniqueMoviesTranslated = await _dbContext.TranslationRequests
+            .Where(tr => tr.Status == TranslationStatus.Completed &&
+                         tr.MediaType == MediaType.Movie &&
+                         tr.MediaId != null)
+            .Select(tr => tr.MediaId)
+            .Distinct()
+            .CountAsync();
+
+        stats.UniqueEpisodesTranslated = await _dbContext.TranslationRequests
+            .Where(tr => tr.Status == TranslationStatus.Completed &&
+                         tr.MediaType == MediaType.Episode &&
+                         tr.MediaId != null)
+            .Select(tr => tr.MediaId)
+            .Distinct()
+            .CountAsync();
+
+        return stats;
     }
 
     public async Task<IEnumerable<DailyStatistics>> GetDailyStatistics(int days = 30)
